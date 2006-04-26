@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+.PHONY: build
+build: build-stamp
+build-stamp:
+	dh_testdir
+	python2.3 setup.py build
+	touch build-stamp
+
+.PHONY: clean
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+	rm -rf build
+	rm -rf dist
+	python setup.py clean
+	find -name '*.pyc' -exec rm -f {} \;
+	dh_clean
+
+.PHONY: install
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k 
+	dh_installdirs
+	python2.3 setup.py install --prefix=debian/xc2424scan/usr
+
+.PHONY: binary-indep
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+	dh_installdocs
+	dh_installman
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_python
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: binary-arch
+binary-arch: build install
+
+.PHONY: binary
+binary: binary-indep binary-arch

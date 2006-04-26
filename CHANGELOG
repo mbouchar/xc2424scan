@@ -1,0 +1,39 @@
+1.4
+
+ * Image list on multiple columns
+ * Added black border around the file previews
+ * Image resolution -> Image size
+ * Bug fixes
+
+1.3.1
+
+ * Optimized the file trasfer
+
+1.3
+
+ * Removed the socket timeout
+ * Fixed the debian archive to build for all architectures
+ * Added support for the rad build system
+
+1.2
+
+ * Fixed the color option
+ * Added configuration file (~/.xc2424scan) and dialog
+ * Added confirmation dialog before deleting a file
+ * Added support for protected folders
+ * Added a basic menu
+ * Bug fixes
+
+1.1
+
+ * Updated Protocol
+ * Added images preview
+ * Bug fixes
+
+1.0
+
+ * Initial Version
+ * Base ui with files listing
+ * Shows some informations when selecting an imge
+ * Dynamic options for some of the image parameters
+ * Able to get some basic files (not rock solid)

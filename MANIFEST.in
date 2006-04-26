@@ -1,0 +1,16 @@
+include INSTALL
+include AUTHORS
+include COPYING
+include CHANGELOG
+include README
+recursive-include doc *
+recursive-include data *
+
+include debian/changelog
+include debian/compat
+include debian/control
+include debian/copyright
+include debian/dirs
+include debian/docs
+include debian/README.Debian
+include debian/rules

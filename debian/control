@@ -1,0 +1,12 @@
+Source: xc2424scan
+Section: utils
+Priority: optional
+Maintainer: Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
+Build-Depends: debhelper (>= 4.0.0)
+Standards-Version: 3.6.2
+
+Package: xc2424scan
+Architecture: all
+Depends: python-qt4
+Description: App to get scanned files from a Xerox WorkCentre C2424
+ PyQt4 Application used to get scanned files from a Xerox WorkCentre C2424 using the network protocol
