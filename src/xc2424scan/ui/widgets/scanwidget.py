@@ -52,14 +52,14 @@ class ScanWidget(QWidget):
         # Last folder visited (see __showFolder_)
         self.__last_folder_ = None
         
-        # Boutons
+        # UI: Boutons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
                         self.__ui_refresh_clicked_)
         QObject.connect(self.__basewidget_.delete, SIGNAL("clicked()"),
                         self.__ui_delete_clicked_)
         QObject.connect(self.__basewidget_.save, SIGNAL("clicked()"),
                         self.__ui_save_clicked_)
-        # Options modifiées
+        # UI: Options modifiées
         QObject.connect(self.__basewidget_.folder, SIGNAL("activated(const QString&)"),
                         self.__ui_folder_currentChanged_)
         QObject.connect(self.__basewidget_.imageList, SIGNAL("currentTextChanged(const QString&)"),
@@ -78,7 +78,7 @@ class ScanWidget(QWidget):
                         self.__folderSet_)
         QObject.connect(self.__threadedscanner_, SIGNAL("fileReceived"),
                         self.__fileReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("previewReceived"),
+        QObject.connect(self.__threadedscanner_, SIGNAL("previewReceived(const QString&)"),
                         self.__previewReceived_)
         QObject.connect(self.__threadedscanner_, SIGNAL("fileDeleted"),
                         self.__fileDeleted_)
@@ -88,9 +88,54 @@ class ScanWidget(QWidget):
     #
     # Fonctions connectées aux threads
     #
+    def __currentFolderReceived_(self):
+        pass
+    
+    def __folderSet_(self):
+        pass
+    
+    def __fileReceived_(self):
+        pass
+    
+    def __previewReceived_(self, filename):
+        filename = str(filename)
+        preview = self.__threadedscanner_.previews[filename]
+        del self.__threadedscanner_.previews[filename]
+
+        # Création du pixmap
+        pixmap = QPixmap()
+        if preview == None:
+            # @todo: Le prefix peut changer
+            pixmap.load("/usr/share/xc2424scan/nopreview.png")
+        else:
+            pixmap.loadFromData(preview)
+            
+        self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
+
+        # creation of a black border
+        # @todo: La bordure n'affiche plus
+        # @todo: Il faut activer le dialogue après que tous les previews soient arrivés
+        painter = QPainter()
+        painter.setPen(Qt.black);
+        painter.begin(pixmap)
+        width = self.__scanned_files_[filename]["respreview"][0] - 1
+        height = self.__scanned_files_[filename]["respreview"][1] - 1
+        painter.drawRect(QRect(0, 0, width, height))
+        painter.end()
+        self.__basewidget_.imageList.sortItems()
+        
+        #self.__basewidget_.refresh.setEnabled(True)
+        #if self.__basewidget_.imageList.currentItem() != None:
+        #    self.__basewidget_.delete.setEnabled(True)
+    
+    def __fileDeleted_(self):
+        pass
+    
     def __connectedToScanner_(self):
         # Affichage du répertoire public
-        self.__refreshFoldersList_()
+        self.__basewidget_.imageList.clear()
+        self.__threadedscanner_.getFiles()
+        self.__threadedscanner_.wait()
 
     def __foldersListReceived_(self, folders):
         for folder in folders:
@@ -100,7 +145,13 @@ class ScanWidget(QWidget):
         self.setEnabled(True)
 
     def __filesListReceived_(self):
-        pass
+        self.__scanned_files_ = self.__threadedscanner_.files
+        
+        # Récupération du preview des images
+        # @todo: Preview avec un filename non fixe
+        filenames = self.__scanned_files_.keys()
+        filenames.sort()
+        self.__threadedscanner_.getPreviews(filenames)
     
     #
     # Fonctions connectées à l'interface graphique
@@ -111,36 +162,11 @@ class ScanWidget(QWidget):
         - Supprime tous les preview
         - Affiche tous les previews
         """
-        # Ajout des fichiers présents dans le répertoire
-        self.__scanned_files_ = self.__scanner_.getFiles()
-        painter = QPainter()
-        painter.setPen(Qt.black);
-
-        for filename in self.__scanned_files_.keys():
-            # Récupération du preview de l'image
-            pixmap = QPixmap()
-            try:
-                # @todo: Preview avec un filename non fixe
-                preview = self.__scanner_.getPreview(filename)
-                pixmap.loadFromData(preview)
-                
-                # creation of a black border
-                painter.begin(pixmap)
-                width = self.__scanned_files_[filename]["respreview"][0] - 1
-                height = self.__scanned_files_[filename]["respreview"][1] - 1
-                painter.drawRect(QRect(0, 0, width, height))
-                painter.end()
-            except NoPreviewError:
-                # @todo: Le prefix peut changer
-                pixmap.load("/usr/share/xc2424scan/nopreview.png")
-            
-            self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
-        self.__basewidget_.imageList.sortItems()
+        self.setEnabled(False)
+        self.__basewidget_.imageList.clear()
+        self.__threadedscanner_.getFiles()
+        self.__threadedscanner_.wait()
         
-        self.__basewidget_.refresh.setEnabled(True)
-        if self.__basewidget_.imageList.currentItem() != None:
-            self.__basewidget_.delete.setEnabled(True)
-    
     def __ui_delete_clicked_(self):
         filename = self.currentFilename()
         if filename is not None:
@@ -179,7 +205,7 @@ class ScanWidget(QWidget):
 
     def __ui_folder_currentChanged_(self, folder):
         folder = str(folder)
-        self.__scanhelper_.setFolder(folder)
+        self.__threadedscanner_.setFolder(folder)
 
     def __ui_imageList_currentChanged_(self, filename):
         filename = str(filename)
@@ -333,7 +359,7 @@ class ScanWidget(QWidget):
             return 1
 
     def connectToScanner(self, host, port):
-        self.__scanhelper_.connectToScanner(host, port)
+        self.__threadedscanner_.connectToScanner(host, port)
     
     def disconnect(self):
         self.__threadedscanner_.disconnect()

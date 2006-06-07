@@ -18,21 +18,13 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 """
-This library is able to communicate with the Xerox WorkCentre C2424
-scanning protocol used by the binary windows application Xerox Scan Utility
-used to retrieve the scanned images from the printer.
-
-The library offers only some high-level functions. To have more informations
-about the protocol used by the Xerox Scan Utility, please read the file
-protocol.txt
-
 @author: Mathieu Bouchard
 @version: 0.1
 """
 
 __all__ = ["ThreadedXeroxC2424"]
 
-from PyQt4.QtCore import QThread
+from PyQt4.QtCore import QString, QThread, SIGNAL
 
 from xc2424scan.scanlib import XeroxC2424
 
@@ -49,11 +41,13 @@ class ThreadedXeroxC2424(QThread):
         self.__scanner_ = XeroxC2424()
         self.__method_ = None
         self.__params_ = None
+        self.previews = {}
         
     #
     # Gets the folder list
     #
     def __getFolders_(self):
+        print "getting folders list"
         folders = self.__scanner_.getFolders()
         self.emit(SIGNAL("foldersList"), folders)
 
@@ -65,8 +59,9 @@ class ThreadedXeroxC2424(QThread):
     # Gets the files list
     #
     def __getFiles_(self):
-        files = self.__scanner_.getFiles()
-        self.emit(SIGNAL("filesList"), files)
+        print "getting files list"
+        self.files = self.__scanner_.getFiles()
+        self.emit(SIGNAL("filesList"))
     
     def getFiles(self):
         self.__method_ = self.__getFiles_
@@ -76,6 +71,7 @@ class ThreadedXeroxC2424(QThread):
     # Gets the name of the current folder
     #
     def __getCurrentFolder_(self):
+        print "getting current folder name"
         folder = self.__scanner_.getCurrentFolder()
         self.emit(SIGNAL("currentFolder"), folder)
     
@@ -87,6 +83,7 @@ class ThreadedXeroxC2424(QThread):
     # Sets the current folder
     #
     def __setFolder_(self):
+        print "changing current folder"
         self.__scanner_.setFolder(self.__params_)
         self.emit(SIGNAL("folderSet"))
     
@@ -99,6 +96,7 @@ class ThreadedXeroxC2424(QThread):
     # Gets a file from the scanner
     #
     def __getFile_(self):
+        print "getting file"
         self.__scanner_.getFile(self.__params_["filename"],
                                 self.__params_["save_filename"],
                                 self.__params_["page"],
@@ -108,7 +106,8 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("fileReceived"), self.__params_["filename"])
     
     def getFile(self, filename, save_filename, page = None, 
-                format = FORMAT_TIFF, dpi = [100, 100], samplesize = 24):
+                format = XeroxC2424.FORMAT_TIFF, dpi = [100, 100], 
+                samplesize = 24):
         self.__method_ = self.__getFile_
         self.__params_ = {"filename": filename,
                           "save_filename": save_filename,
@@ -121,19 +120,23 @@ class ThreadedXeroxC2424(QThread):
     #
     # Gets the preview of a file
     #
-    def __getPreview_(self):
-        data = self.__scanner_.getPreview(self.__params_)
-        self.emit(SIGNAL("previewReceived"), self.__params_, data)
+    def __getPreviews_(self):
+        print "getting preview of", self.__params_
+        # Possible de faire un cache ici
+        for filename in self.__params_:
+            self.previews[filename] = self.__scanner_.getPreview(filename)
+            self.emit(SIGNAL("previewReceived(const QString&)"), QString(filename))
     
-    def getPreview(self, filename):
-        self.__method_ = self.__getPreview_
-        self.__params_ = filename
+    def getPreviews(self, filenames):
+        self.__method_ = self.__getPreviews_
+        self.__params_ = filenames
         self.start()
     
     #
     # Delete a file from the scanner
     #
     def __deleteFile_(self):
+        print "deleting file"
         self.__scanner_.deleteFile(self.__params_)
         self.emit(SIGNAL("fileDeleted"), self.__params_)
     
@@ -146,8 +149,10 @@ class ThreadedXeroxC2424(QThread):
     # Connect to the scanner
     #
     def __connectToScanner_(self):
+        print "connecting to scanner"
         self.__scanner_.connect(self.__host_, self.__port_)
-        self.emit(SIGNAL("connectedToScanner()"))
+        print "connected to scanner"
+        self.emit(SIGNAL("connectedToScanner"))
         
     def connectToScanner(self, host, port):
         self.__method_ = self.__connectToScanner_
