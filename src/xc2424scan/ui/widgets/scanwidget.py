@@ -33,61 +33,84 @@ from PyQt4.QtGui import QWidget, QFileDialog, QListWidgetItem, QPixmap, \
                         QIcon, QMessageBox, QInputDialog, QLineEdit, QPainter
 import os
 
-from xc2424scan.scanlib import XeroxC2424, ProtectedError, SocketError, \
-                               NoPreviewError
+from xc2424scan.threadedscanlib import ThreadedXeroxC2424
+from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
+
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
 class ScanWidget(QWidget):
+    # @todo: Les widgets doivent être désactivés par défaut
     def __init__(self, parent = None):
         QWidget.__init__(self, parent)
         self.__basewidget_ = Ui_ScanWidgetBase()
         self.__basewidget_.setupUi(self)
         
-        # The lib used to connect to the scanner
-        self.__scanner_ = XeroxC2424()
+        self.__threadedscanner_ = ThreadedXeroxC2424()
+        
         # List of files available on the scanner
         self.__scanned_files_ = None
         # Last folder visited (see __showFolder_)
         self.__last_folder_ = None
         
+        # Boutons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
-                        self.__refreshFolder_)
-        QObject.connect(self.__basewidget_.folder, SIGNAL("activated(const QString&)"),
-                        self.__showFolder_)
-        QObject.connect(self.__basewidget_.imageList, 
-                        SIGNAL("currentTextChanged(const QString&)"),
-                        self.__showFile_)
+                        self.__ui_refresh_clicked_)
         QObject.connect(self.__basewidget_.delete, SIGNAL("clicked()"),
-                        self.__deleteFile_)
-        QObject.connect(self.__basewidget_.format, SIGNAL("currentIndexChanged(const QString&)"),
-                        self.__setFormat_)
+                        self.__ui_delete_clicked_)
         QObject.connect(self.__basewidget_.save, SIGNAL("clicked()"),
-                        self.__saveFile_)
-
-    def connectToScanner(self, host, port):
-        self.__scanner_.connect(host, port)
-        # Affichage du répertoire public
-        self.__refreshFolders_()
-        self.__showFolder_("Public")
-    
-    def disconnect(self):
-        self.__scanner_.disconnect()
-    
-    def __refreshFolders_(self):
-        self.setEnabled(False)
+                        self.__ui_save_clicked_)
+        # Options modifiées
+        QObject.connect(self.__basewidget_.folder, SIGNAL("activated(const QString&)"),
+                        self.__ui_folder_currentChanged_)
+        QObject.connect(self.__basewidget_.imageList, SIGNAL("currentTextChanged(const QString&)"),
+                        self.__ui_imageList_currentChanged_)
+        QObject.connect(self.__basewidget_.format, SIGNAL("currentIndexChanged(const QString&)"),
+                        self.__ui_format_currentChanged_)
         
-        self.__basewidget_.folder.clear()
-        for folder in self.__scanner_.getFolders():
+        # Signals emited from threads
+        QObject.connect(self.__threadedscanner_, SIGNAL("foldersList"),
+                        self.__foldersListReceived_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("filesList"),
+                        self.__filesListReceived_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("currentFolder"),
+                        self.__currentFolderReceived_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("folderSet"),
+                        self.__folderSet_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("fileReceived"),
+                        self.__fileReceived_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("previewReceived"),
+                        self.__previewReceived_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("fileDeleted"),
+                        self.__fileDeleted_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("connectedToScanner"),
+                        self.__connectedToScanner_)
+
+    #
+    # Fonctions connectées aux threads
+    #
+    def __connectedToScanner_(self):
+        # Affichage du répertoire public
+        self.__refreshFoldersList_()
+
+    def __foldersListReceived_(self, folders):
+        for folder in folders:
             self.__basewidget_.folder.addItem(folder)
             
+        self.__showFolder_("Public")
         self.setEnabled(True)
-    
-    def __refreshFolder_(self):
-        # @todo: Il va y avoir pas mal plus de stock à mettre disabled
-        self.__basewidget_.refresh.setEnabled(False)
-        self.__basewidget_.delete.setEnabled(False)
-        self.__basewidget_.imageList.clear()
 
+    def __filesListReceived_(self):
+        pass
+    
+    #
+    # Fonctions connectées à l'interface graphique
+    #
+    def __ui_refresh_clicked_(self):
+        """
+        - Désactive l'ensemble du ui
+        - Supprime tous les preview
+        - Affiche tous les previews
+        """
         # Ajout des fichiers présents dans le répertoire
         self.__scanned_files_ = self.__scanner_.getFiles()
         painter = QPainter()
@@ -118,30 +141,47 @@ class ScanWidget(QWidget):
         if self.__basewidget_.imageList.currentItem() != None:
             self.__basewidget_.delete.setEnabled(True)
     
-    def __showFolder_(self, folder):
-        folder = str(folder)
-        try:
-            self.__scanner_.setFolder(folder)
-            self.__refreshFolder_()
-        except ProtectedError:
-            password, result = QInputDialog.getText(self, "Accessing a protected folder",
-                                                    "Please enter the password for the protected " \
-                                                    "folder %s" % folder, QLineEdit.Password)
- 
-            if result is True:
-                try:
-                    self.__scanner_.setFolder(folder, str(password))
-                    self.__refreshFolder_()
-                except (ValueError, ProtectedError):
-                    QMessageBox.warning(self, "Invalid password", 
-                                        "The password entered is not valid",
-                                        QMessageBox.Ok, QMessageBox.NoButton)
-                    self.__basewidget_.folder.setCurrentIndex(self.__last_folder_)
-                    return
-                
-        self.__last_folder_ = self.__basewidget_.folder.currentIndex()
+    def __ui_delete_clicked_(self):
+        filename = self.currentFilename()
+        if filename is not None:
+            result = QMessageBox.question(self, "Confirmation of file deletion",
+                                          "Do you really want to delete the file %s" \
+                                          "from the scanner?" % filename, 
+                                          QMessageBox.Yes, QMessageBox.No)
+            if result == QMessageBox.Yes:
+                self.__scanner_.deleteFile(filename)
+                self.__refreshFolder_()
 
-    def __showFile_(self, filename):
+    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
+        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
+                                samplesize)
+
+    def __ui_save_clicked_(self):
+        filename = self.currentFilename()
+        if filename is not None:
+                save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
+                if save_filename != "":
+                    pages = self.getPages()
+                    format = self.getFormat()
+                    dpi = self.getDpi()
+                    if dpi == None:
+                        dpi = self.__scanned_files_[filename]["dpi"]
+                    samplesize = self.getSamplesize()
+                    
+                    # @todo: Partir une thread pour le transfer
+                    if format != "pdf" and len(pages) > 1:
+                        for page in pages:
+                            save_filename_x = "%s-%d%s" % (os.path.splitext(save_filename)[0], page, 
+                                                           os.path.splitext(save_filename)[1])
+                            self.__savePage_(filename, page, format, dpi, samplesize, save_filename_x)
+                    else:
+                        self.__savePage_(filename, pages[0], format, dpi, samplesize, save_filename)
+
+    def __ui_folder_currentChanged_(self, folder):
+        folder = str(folder)
+        self.__scanhelper_.setFolder(folder)
+
+    def __ui_imageList_currentChanged_(self, filename):
         filename = str(filename)
         
         if filename == "":
@@ -189,12 +229,7 @@ class ScanWidget(QWidget):
             self.__basewidget_.format.setEnabled(True)
             self.__setFormat_(self.__basewidget_.format.currentText())
     
-    def __clearOptions_(self):
-        self.__basewidget_.page.clear()
-        self.__basewidget_.resolution.clear()
-        self.__basewidget_.color.clear()
-    
-    def __setFormat_(self, format):
+    def __ui_format_currentChanged_(self, format):
         format = str(format).lower()
         if format == "pdf":
             self.__basewidget_.page.setEnabled(False)
@@ -204,17 +239,57 @@ class ScanWidget(QWidget):
         self.__basewidget_.resolution.setEnabled(True)
         self.__basewidget_.color.setEnabled(True)
     
-    def __deleteFile_(self):
-        filename = self.currentFilename()
-        if filename is not None:
-            result = QMessageBox.question(self, "Confirmation of file deletion",
-                                          "Do you really want to delete the file %s" \
-                                          "from the scanner?" % filename, 
-                                          QMessageBox.Yes, QMessageBox.No)
-            if result == QMessageBox.Yes:
-                self.__scanner_.deleteFile(filename)
-                self.__refreshFolder_()
+    #
+    # Autres fonctions
+    #
+    def __refreshFilesList_(self):
+        # @todo: Il va y avoir pas mal plus de stock à mettre disabled
+        self.__basewidget_.refresh.setEnabled(False)
+        self.__basewidget_.delete.setEnabled(False)
+        self.__basewidget_.imageList.clear()
 
+        # Ajout des fichiers présents dans le répertoire
+        self.__scanned_files_ = self.__scanner_.getFiles()
+        painter = QPainter()
+        painter.setPen(Qt.black);
+
+        for filename in self.__scanned_files_.keys():
+            # Récupération du preview de l'image
+            pixmap = QPixmap()
+            try:
+                # @todo: Preview avec un filename non fixe
+                preview = self.__scanner_.getPreview(filename)
+                pixmap.loadFromData(preview)
+                
+                # creation of a black border
+                painter.begin(pixmap)
+                width = self.__scanned_files_[filename]["respreview"][0] - 1
+                height = self.__scanned_files_[filename]["respreview"][1] - 1
+                painter.drawRect(QRect(0, 0, width, height))
+                painter.end()
+            except NoPreviewError:
+                # @todo: Le prefix peut changer
+                pixmap.load("/usr/share/xc2424scan/nopreview.png")
+            
+            self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
+        self.__basewidget_.imageList.sortItems()
+        
+        self.__basewidget_.refresh.setEnabled(True)
+        if self.__basewidget_.imageList.currentItem() != None:
+            self.__basewidget_.delete.setEnabled(True)
+    
+    def __folderSet_(self):
+        self.__refreshFolder_()
+        self.__last_folder_ = self.__basewidget_.folder.currentIndex()
+    
+    def __clearOptions_(self):
+        self.__basewidget_.page.clear()
+        self.__basewidget_.resolution.clear()
+        self.__basewidget_.color.clear()
+    
+    #
+    # API public
+    #
     def currentFilename(self):
         currentItem = self.__basewidget_.imageList.currentItem()
         # Vérification inutile, car le bouton delete est activ seulemen
@@ -256,28 +331,9 @@ class ScanWidget(QWidget):
         else:
             # @todo: Regarder si c'est vraiment le noir et blanc (voir 8)
             return 1
-    
-    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
-        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
-                                samplesize)
 
-    def __saveFile_(self):
-        filename = self.currentFilename()
-        if filename is not None:
-                save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
-                if save_filename != "":
-                    pages = self.getPages()
-                    format = self.getFormat()
-                    dpi = self.getDpi()
-                    if dpi == None:
-                        dpi = self.__scanned_files_[filename]["dpi"]
-                    samplesize = self.getSamplesize()
-                    
-                    # @todo: Partir une thread pour le transfer
-                    if format != "pdf" and len(pages) > 1:
-                        for page in pages:
-                            save_filename_x = "%s-%d%s" % (os.path.splitext(save_filename)[0], page, 
-                                                           os.path.splitext(save_filename)[1])
-                            self.__savePage_(filename, page, format, dpi, samplesize, save_filename_x)
-                    else:
-                        self.__savePage_(filename, pages[0], format, dpi, samplesize, save_filename)
+    def connectToScanner(self, host, port):
+        self.__scanhelper_.connectToScanner(host, port)
+    
+    def disconnect(self):
+        self.__threadedscanner_.disconnect()

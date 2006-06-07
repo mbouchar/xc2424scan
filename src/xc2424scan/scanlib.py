@@ -244,7 +244,7 @@ class XeroxC2424:
 
         return files
 
-    def getFolder(self):
+    def getCurrentFolder(self):
         """Used to get the name of the current folder
         
         @returns: The name of the current folder
