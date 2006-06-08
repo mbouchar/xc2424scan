@@ -41,6 +41,9 @@ class ThreadedXeroxC2424(QThread):
         self.__scanner_ = XeroxC2424()
         self.__method_ = None
         self.__params_ = None
+        
+        self.files = None
+        self.folders = None
         self.previews = {}
         
     #
@@ -48,11 +51,11 @@ class ThreadedXeroxC2424(QThread):
     #
     def __getFolders_(self):
         print "getting folders list"
-        folders = self.__scanner_.getFolders()
-        self.emit(SIGNAL("foldersList"), folders)
+        self.folders = self.__scanner_.getFolders()
+        self.emit(SIGNAL("foldersList()"))
 
     def getFolders(self):
-        self.__method_ = self.__refreshFoldersList_
+        self.__method_ = self.__getFolders_
         self.start()
         
     #
@@ -61,7 +64,7 @@ class ThreadedXeroxC2424(QThread):
     def __getFiles_(self):
         print "getting files list"
         self.files = self.__scanner_.getFiles()
-        self.emit(SIGNAL("filesList"))
+        self.emit(SIGNAL("filesList()"))
     
     def getFiles(self):
         self.__method_ = self.__getFiles_
@@ -73,7 +76,7 @@ class ThreadedXeroxC2424(QThread):
     def __getCurrentFolder_(self):
         print "getting current folder name"
         folder = self.__scanner_.getCurrentFolder()
-        self.emit(SIGNAL("currentFolder"), folder)
+        self.emit(SIGNAL("currentFolder(const QString&)"), folder)
     
     def getCurrentFolder(self):
         self.__method_ = self.__getCurrentFolder_
@@ -85,7 +88,7 @@ class ThreadedXeroxC2424(QThread):
     def __setFolder_(self):
         print "changing current folder"
         self.__scanner_.setFolder(self.__params_)
-        self.emit(SIGNAL("folderSet"))
+        self.emit(SIGNAL("folderSet()"))
     
     def setFolder(self, folder):
         self.__method_ = self.__setFolder_
@@ -103,7 +106,8 @@ class ThreadedXeroxC2424(QThread):
                                 self.__params_["format"],
                                 self.__params_["dpi"],
                                 self.__params_["samplesize"])
-        self.emit(SIGNAL("fileReceived"), self.__params_["filename"])
+        self.emit(SIGNAL("fileReceived(const QString&)"),
+                  self.__params_["filename"])
     
     def getFile(self, filename, save_filename, page = None, 
                 format = XeroxC2424.FORMAT_TIFF, dpi = [100, 100], 
@@ -138,7 +142,7 @@ class ThreadedXeroxC2424(QThread):
     def __deleteFile_(self):
         print "deleting file"
         self.__scanner_.deleteFile(self.__params_)
-        self.emit(SIGNAL("fileDeleted"), self.__params_)
+        self.emit(SIGNAL("fileDeleted(const QString&)"), self.__params_)
     
     def deleteFile(self, filename):
         self.__method_ = self.__deleteFile_
@@ -152,7 +156,7 @@ class ThreadedXeroxC2424(QThread):
         print "connecting to scanner"
         self.__scanner_.connect(self.__host_, self.__port_)
         print "connected to scanner"
-        self.emit(SIGNAL("connectedToScanner"))
+        self.emit(SIGNAL("connectedToScanner()"))
         
     def connectToScanner(self, host, port):
         self.__method_ = self.__connectToScanner_
