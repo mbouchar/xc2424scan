@@ -51,6 +51,8 @@ class ScanWidget(QWidget):
         self.__scanned_files_ = None
         # Last folder visited (see __showFolder_)
         self.__last_folder_ = None
+        # Nombre de previews affichés
+        self.__nb_preview_received_ = 0
         
         # UI: Boutons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
@@ -74,8 +76,10 @@ class ScanWidget(QWidget):
                         self.__filesListReceived_)
         QObject.connect(self.__threadedscanner_, SIGNAL("currentFolder(const QString&)"),
                         self.__currentFolderReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("folderSet()"),
+        QObject.connect(self.__threadedscanner_, SIGNAL("folderSet(const QString&)"),
                         self.__folderSet_)
+        QObject.connect(self.__threadedscanner_, SIGNAL("folderProtected(const QString&)"),
+                        self.__folderProtected_)
         QObject.connect(self.__threadedscanner_, SIGNAL("fileReceived(const QString&)"),
                         self.__fileReceived_)
         QObject.connect(self.__threadedscanner_, SIGNAL("previewReceived(const QString&)"),
@@ -91,13 +95,27 @@ class ScanWidget(QWidget):
     def __currentFolderReceived_(self, folder):
         pass
     
-    def __folderSet_(self):
+    def __folderSet_(self, folder):
         self.__ui_refresh_clicked_()
     
+    def __folderProtected_(self, folder):
+        # @todo: si on appuye sur cancel, il faut remettre l'ancien répertoire dans la liste
+        # @todo: on doit désactiver la liste lors de la récupération des previews
+        folder = str(folder)
+        
+        password, result = QInputDialog.getText(self, "Accessing a protected folder",
+                                        "Please enter the password for the protected " \
+                                        "folder %s" % folder, QLineEdit.Password)
+
+        if result is True:
+            self.__threadedscanner_.setFolder(folder, str(password))
+                
     def __fileReceived_(self, filename):
         pass
     
     def __previewReceived_(self, filename):
+        self.__nb_preview_received_ += 1
+        
         filename = str(filename)
         preview = self.__threadedscanner_.previews[filename]
         del self.__threadedscanner_.previews[filename]
@@ -110,11 +128,7 @@ class ScanWidget(QWidget):
         else:
             pixmap.loadFromData(preview)
             
-        self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
-
         # creation of a black border
-        # @todo: La bordure n'affiche plus
-        # @todo: Il faut activer le dialogue après que tous les previews soient arrivés
         painter = QPainter()
         painter.setPen(Qt.black);
         painter.begin(pixmap)
@@ -122,11 +136,16 @@ class ScanWidget(QWidget):
         height = self.__scanned_files_[filename]["respreview"][1] - 1
         painter.drawRect(QRect(0, 0, width, height))
         painter.end()
-        self.__basewidget_.imageList.sortItems()
-        
-        #self.__basewidget_.refresh.setEnabled(True)
-        #if self.__basewidget_.imageList.currentItem() != None:
-        #    self.__basewidget_.delete.setEnabled(True)
+
+        # Ajout de l'icône à la liste
+        items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
+        items[0].setIcon(QIcon(pixmap))
+
+        if self.__nb_preview_received_ == len(self.__scanned_files_):
+            self.__basewidget_.refresh.setEnabled(True)
+            if self.__basewidget_.imageList.currentItem() != None:
+                self.__basewidget_.delete.setEnabled(True)
+                self.__basewidget_.save.setEnabled(True)
     
     def __fileDeleted_(self, filename):
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
@@ -155,6 +174,15 @@ class ScanWidget(QWidget):
         if len(self.__scanned_files_) != 0:
             filenames = self.__scanned_files_.keys()
             filenames.sort()
+            # Affichage des fichiers
+            pixmap = QPixmap()
+            pixmap.load("/usr/share/xc2424scan/waitingpreview.png")
+
+            for filename in filenames:
+                self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
+
+            # Récupération des previews
+            self.__nb_preview_received_ = 0
             self.__threadedscanner_.getPreviews(filenames)
     
     #
@@ -166,6 +194,7 @@ class ScanWidget(QWidget):
         - Supprime tous les preview
         - Affiche tous les previews
         """
+        # @todo: à refaire
         self.setEnabled(False)
         self.__basewidget_.imageList.clear()
         self.__threadedscanner_.getFiles()
@@ -252,9 +281,10 @@ class ScanWidget(QWidget):
                 self.__basewidget_.color.addItem("Black and White")
             else:
                 self.__basewidget_.color.addItem("Black and White")
-            
-            self.__basewidget_.delete.setEnabled(True)
-            self.__basewidget_.save.setEnabled(True)
+
+            if not self.__threadedscanner_.isRunning():
+                self.__basewidget_.delete.setEnabled(True)
+                self.__basewidget_.save.setEnabled(True)
             self.__basewidget_.format.setEnabled(True)
             self.__ui_format_currentChanged_(self.__basewidget_.format.currentText())
     

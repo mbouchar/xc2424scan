@@ -26,7 +26,7 @@ __all__ = ["ThreadedXeroxC2424"]
 
 from PyQt4.QtCore import QString, QThread, SIGNAL
 
-from xc2424scan.scanlib import XeroxC2424
+from xc2424scan.scanlib import XeroxC2424, ProtectedError
 
 class ThreadedXeroxC2424(QThread):
     """@todo: Créer un mutex pour qu'une seule fonction soit exécutée à la fois
@@ -50,7 +50,6 @@ class ThreadedXeroxC2424(QThread):
     # Gets the folder list
     #
     def __getFolders_(self):
-        print "getting folders list"
         self.folders = self.__scanner_.getFolders()
         self.emit(SIGNAL("foldersList()"))
 
@@ -62,7 +61,6 @@ class ThreadedXeroxC2424(QThread):
     # Gets the files list
     #
     def __getFiles_(self):
-        print "getting files list"
         self.files = self.__scanner_.getFiles()
         self.emit(SIGNAL("filesList()"))
     
@@ -74,7 +72,6 @@ class ThreadedXeroxC2424(QThread):
     # Gets the name of the current folder
     #
     def __getCurrentFolder_(self):
-        print "getting current folder name"
         folder = self.__scanner_.getCurrentFolder()
         self.emit(SIGNAL("currentFolder(const QString&)"), folder)
     
@@ -86,20 +83,22 @@ class ThreadedXeroxC2424(QThread):
     # Sets the current folder
     #
     def __setFolder_(self):
-        print "changing current folder"
-        self.__scanner_.setFolder(self.__params_)
-        self.emit(SIGNAL("folderSet()"))
+        folder, password = self.__params_
+        try:
+            self.__scanner_.setFolder(folder, password)
+            self.emit(SIGNAL("folderSet(const QString&)"), folder)
+        except ProtectedError:
+            self.emit(SIGNAL("folderProtected(const QString&)"), folder)
     
-    def setFolder(self, folder):
+    def setFolder(self, folder, password = None):
         self.__method_ = self.__setFolder_
-        self.__params_ = folder
+        self.__params_ = [folder, password]
         self.start()
     
     #
     # Gets a file from the scanner
     #
     def __getFile_(self):
-        print "getting file"
         self.__scanner_.getFile(self.__params_["filename"],
                                 self.__params_["save_filename"],
                                 self.__params_["page"],
@@ -125,7 +124,6 @@ class ThreadedXeroxC2424(QThread):
     # Gets the preview of a file
     #
     def __getPreviews_(self):
-        print "getting preview of", self.__params_
         # Possible de faire un cache ici
         for filename in self.__params_:
             self.previews[filename] = self.__scanner_.getPreview(filename)
@@ -140,7 +138,6 @@ class ThreadedXeroxC2424(QThread):
     # Delete a file from the scanner
     #
     def __deleteFile_(self):
-        print "deleting file"
         self.__scanner_.deleteFile(self.__params_)
         self.emit(SIGNAL("fileDeleted(const QString&)"), self.__params_)
     
@@ -153,9 +150,7 @@ class ThreadedXeroxC2424(QThread):
     # Connect to the scanner
     #
     def __connectToScanner_(self):
-        print "connecting to scanner"
         self.__scanner_.connect(self.__host_, self.__port_)
-        print "connected to scanner"
         self.emit(SIGNAL("connectedToScanner()"))
         
     def connectToScanner(self, host, port):
