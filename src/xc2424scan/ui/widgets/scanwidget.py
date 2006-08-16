@@ -53,6 +53,8 @@ class ScanWidget(QWidget):
         self.__last_folder_ = None
         # Nombre de previews affichés
         self.__nb_preview_received_ = 0
+        # Dernier répertoire visité
+        self.__old_folder_ = "Public"
         
         # UI: Boutons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
@@ -96,7 +98,7 @@ class ScanWidget(QWidget):
         pass
     
     def __folderSet_(self, folder):
-        self.__ui_refresh_clicked_()
+        self.__refreshPreviews_()
     
     def __folderProtected_(self, folder):
         # @todo: si on appuye sur cancel, il faut remettre l'ancien répertoire dans la liste
@@ -184,6 +186,9 @@ class ScanWidget(QWidget):
             # Récupération des previews
             self.__nb_preview_received_ = 0
             self.__threadedscanner_.getPreviews(filenames)
+        else:
+            self.__basewidget_.refresh.setEnabled(True)
+            self.__basewidget_.folder.setEnabled(True)
     
     #
     # Fonctions connectées à l'interface graphique
@@ -194,12 +199,8 @@ class ScanWidget(QWidget):
         - Supprime tous les preview
         - Affiche tous les previews
         """
-        # @todo: à refaire
-        self.setEnabled(False)
-        self.__basewidget_.imageList.clear()
-        self.__threadedscanner_.getFiles()
-        self.__threadedscanner_.wait()
-        
+        self.__refreshPreviews_()
+
     def __ui_delete_clicked_(self):
         filename = self.currentFilename()
         if filename is not None:
@@ -209,10 +210,6 @@ class ScanWidget(QWidget):
                                           QMessageBox.Yes, QMessageBox.No)
             if result == QMessageBox.Yes:
                 self.__threadedscanner_.deleteFile(filename)
-
-    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
-        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
-                                samplesize)
 
     def __ui_save_clicked_(self):
         filename = self.currentFilename()
@@ -342,6 +339,20 @@ class ScanWidget(QWidget):
         self.__basewidget_.resolution.clear()
         self.__basewidget_.color.clear()
     
+    def __refreshPreviews_(self):
+        self.__basewidget_.refresh.setEnabled(False)
+        self.__basewidget_.delete.setEnabled(False)
+        self.__basewidget_.save.setEnabled(False)
+        self.__basewidget_.folder.setEnabled(False)
+        self.__basewidget_.imageList.clear()
+
+        self.__threadedscanner_.getFiles()
+        self.__threadedscanner_.wait()
+
+    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
+        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
+                                samplesize)
+
     #
     # API public
     #
