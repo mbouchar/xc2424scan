@@ -1,53 +1,61 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-.PHONY: build
-build: build-stamp
-build-stamp:
-	dh_testdir
-	python2.3 setup.py build
-	touch build-stamp
+# This is the debhelper compatibility version to use.
+export DH_COMPAT = 5
 
-.PHONY: clean
+PYVERS = $(shell pyversions -r debian/control)
+
+build: build-stamp
+
+build-stamp: $(PYVERS:%=build-ext-%-stamp)
+	touch $@
+
+build-ext-%-stamp:
+	dh_testdir
+	$* setup.py build -g
+	touch $@
+
 clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp
+	rm -f build*stamp
 	rm -rf build
-	rm -rf dist
-	python setup.py clean
-	find -name '*.pyc' -exec rm -f {} \;
+	find . -name '*.pyc' | xargs rm -f
 	dh_clean
 
-.PHONY: install
-install: build
+install: build install-prereq $(PYVERS:%=install-ext-%)
+
+install-prereq:
 	dh_testdir
 	dh_testroot
-	dh_clean -k 
+	dh_clean -k
 	dh_installdirs
-	python2.3 setup.py install --prefix=debian/xc2424scan/usr
 
-.PHONY: binary-indep
+install-ext-%:
+	$* setup.py install --root=debian/xc2424scan
+	find debian/xc2424scan -name '*.pyc' | xargs rm -f
+
+# Build architecture-independent files here.
 binary-indep: build install
-	dh_testdir
-	dh_testroot
-	dh_installdocs
-	dh_installman
-	dh_strip
-	dh_compress
-	dh_fixperms
-	dh_python
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
+	dh_testdir -i
+	dh_testroot -i
+#	dh_installdocs -A
+	dh_pycentral -i
+	dh_python -i
+#	dh_installchangelogs -i
+	dh_strip -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
 
-.PHONY: binary-arch
-binary-arch: build install
+binary: binary-indep
 
-.PHONY: binary
-binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary install configure
+

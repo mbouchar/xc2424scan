@@ -1,3 +1,9 @@
+xc2424scan (1.5-1) etch; urgency=low
+
+  * Uses new debian python-policy
+
+ -- Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>  Tue, 19 Sep 2006 17:02:08 -0400
+
 xc2424scan (1.4-1) etch; urgency=low
 
   * New upstream release
