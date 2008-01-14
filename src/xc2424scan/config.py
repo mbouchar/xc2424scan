@@ -28,7 +28,7 @@ __all__ = ["Config"]
 
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError, \
                          DuplicateSectionError
-import os
+import sys, os
 
 class Config(object):
     
@@ -43,6 +43,12 @@ class Config(object):
 
         self.__address_ = None
         self.__port_ = None
+        
+        # @todo: Utiliser ConfigParser
+        if "--verbose" in sys.argv:
+            self.__debug_ = True
+        else:
+            self.__debug_ = False
 
         self.reload()
         
@@ -83,19 +89,22 @@ class Config(object):
             config_file = file(os.path.expanduser("~/.xc2424scan"), "w")
         self.__config_.write(config_file)
 
-    def __getAddress_(self):
+    def __get_address_(self):
         return self.__address_
-    
-    def __setAddress_(self, address):
+    def __set_address_(self, address):
         self.__modify_("address", address)
         self.__address_ = address
     
-    def __getPort_(self):
+    def __get_port_(self):
         return self.__port_
-    
-    def __setPort_(self, port):
+    def __set_port_(self, port):
         self.__modify_("port", port)
         self.__port_ = port
+    
+    def __get_debug_(self):
+        return self.__debug_
+    def __set_debug_(self, debug):
+        self.__debug_ = debug
     
     def reload(self):
         # Lecture du fichier
@@ -111,5 +120,6 @@ class Config(object):
     def save(self):
         pass
     
-    address = property(__getAddress_, __setAddress_)
-    port = property(__getPort_, __setPort_)
+    address = property(__get_address_, __set_address_)
+    port = property(__get_port_, __set_port_)
+    debug = property(__get_debug_, __set_debug_)

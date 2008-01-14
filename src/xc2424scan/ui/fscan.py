@@ -26,10 +26,11 @@ This is the main form of the xc2424scan application
 
 __all__ = ["FScan"]
 
+import sys
+
 from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QMainWindow, QDialog, QVBoxLayout, QMenuBar, QMenu, \
                         QAction, QStatusBar
-import sys
 
 from xc2424scan.ui.widgets.scanwidget import ScanWidget
 from xc2424scan.ui.widgets.configwidget import ConfigWidget
@@ -39,7 +40,7 @@ from xc2424scan import version
 class FScanConfig(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        self.setWindowTitle("Configuration")
+        self.setWindowTitle(_("Configuration"))
         
         self.config = ConfigWidget(self)
         self.__layout_ = QVBoxLayout(self)
@@ -59,16 +60,16 @@ class FScanConfig(QDialog):
 class FScan(QMainWindow):
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
-        self.setWindowTitle("Xerox WorkCentre C2424 Scanner Utility v%s" %
+        self.setWindowTitle(_("Xerox WorkCentre C2424 Scanner Utility v%s") %
                             version.__version__)
-        self.__scanWidget_ = ScanWidget(self)
-        self.setCentralWidget(self.__scanWidget_)
-        
         self.__config_ = Config()
         if self.__config_.address is None:
             if self.__show_config_() is False:
                 sys.exit()
             self.__config_.reload()
+        
+        self.__scanWidget_ = ScanWidget(self, self.__config_.debug)
+        self.setCentralWidget(self.__scanWidget_)
         
         self.__scanWidget_.connectToScanner(self.__config_.address, 
                                             self.__config_.port)
@@ -85,16 +86,16 @@ class FScan(QMainWindow):
         # File
         self.menuFile = QMenu(self.__menu_)
         self.actionQuit   = QAction(self)
-        self.menuFile.setTitle("&File")
+        self.menuFile.setTitle(_("&File"))
         self.menuFile.addAction(self.actionQuit)
-        self.actionQuit.setText("&Quit")
+        self.actionQuit.setText(_("&Quit"))
 
         # Settings
         self.menuSettings    = QMenu(self.__menu_)
         self.actionConfigure = QAction(self)
         self.menuSettings.addAction(self.actionConfigure)
-        self.menuSettings.setTitle("&Settings")
-        self.actionConfigure.setText("&Configure xc2424scan")
+        self.menuSettings.setTitle(_("&Settings"))
+        self.actionConfigure.setText(_("&Configure xc2424scan"))
 
         self.__menu_.addAction(self.menuFile.menuAction())
         self.__menu_.addAction(self.menuSettings.menuAction())

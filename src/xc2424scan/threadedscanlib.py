@@ -32,13 +32,13 @@ class ThreadedXeroxC2424(QThread):
     """@todo: Créer un mutex pour qu'une seule fonction soit exécutée à la fois
     """
     
-    def __init__(self):
+    def __init__(self, debug = False):
         """
         """
         QThread.__init__(self)
         
         # The lib used to connect to the scanner
-        self.__scanner_ = XeroxC2424()
+        self.__scanner_ = XeroxC2424(debug)
         self.__method_ = None
         self.__params_ = None
         

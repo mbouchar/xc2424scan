@@ -18,30 +18,13 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import sys, gettext
+gettext.install("xc2424scan")
+
 from PyQt4.QtCore import QObject, SIGNAL
 from PyQt4.QtGui import QApplication
 
-
-import sys
-
-try:
-    from xc2424scan.ui.fscan import FScan
-except ImportError:
-    print "WARNING: The xc2424scan package could not be loaded"
-    print "         Trying to load cmedit from the \"src\" directory"
-
-    sys.path.insert(0, "src")
-    
-    try:
-    	from xc2424scan.ui.fscan import FScan
-    	print "The xc2424scan package has been found"
-    	print ""
-    except ImportError, e:
-    	print "ERROR: The xc2424scan package could not be loaded"
-    	print "       Please check your installation or add the xc2424scan"
-    	print "       package to PYTHONPATH and try again"
-    	print "The error was : ", e
-    	sys.exit(1)
+from xc2424scan.ui.fscan import FScan
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

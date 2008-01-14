@@ -40,12 +40,12 @@ from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
 class ScanWidget(QWidget):
     # @todo: Les widgets doivent être désactivés par défaut
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, debug = False):
         QWidget.__init__(self, parent)
         self.__basewidget_ = Ui_ScanWidgetBase()
         self.__basewidget_.setupUi(self)
         
-        self.__threadedscanner_ = ThreadedXeroxC2424()
+        self.__scanner_ = ThreadedXeroxC2424(debug)
         
         # List of files available on the scanner
         self.__scanned_files_ = None
@@ -72,23 +72,23 @@ class ScanWidget(QWidget):
                         self.__ui_format_currentChanged_)
         
         # Signals emited from threads
-        QObject.connect(self.__threadedscanner_, SIGNAL("foldersList()"),
+        QObject.connect(self.__scanner_, SIGNAL("foldersList()"),
                         self.__foldersListReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("filesList()"),
+        QObject.connect(self.__scanner_, SIGNAL("filesList()"),
                         self.__filesListReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("currentFolder(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("currentFolder(const QString&)"),
                         self.__currentFolderReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("folderSet(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("folderSet(const QString&)"),
                         self.__folderSet_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("folderProtected(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("folderProtected(const QString&)"),
                         self.__folderProtected_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("fileReceived(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("fileReceived(const QString&)"),
                         self.__fileReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("previewReceived(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("previewReceived(const QString&)"),
                         self.__previewReceived_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("fileDeleted(const QString&)"),
+        QObject.connect(self.__scanner_, SIGNAL("fileDeleted(const QString&)"),
                         self.__fileDeleted_)
-        QObject.connect(self.__threadedscanner_, SIGNAL("connectedToScanner()"),
+        QObject.connect(self.__scanner_, SIGNAL("connectedToScanner()"),
                         self.__connectedToScanner_)
 
     #
@@ -110,7 +110,7 @@ class ScanWidget(QWidget):
                                         "folder %s" % folder, QLineEdit.Password)
 
         if result is True:
-            self.__threadedscanner_.setFolder(folder, str(password))
+            self.__scanner_.setFolder(folder, str(password))
                 
     def __fileReceived_(self, filename):
         pass
@@ -119,8 +119,8 @@ class ScanWidget(QWidget):
         self.__nb_preview_received_ += 1
         
         filename = str(filename)
-        preview = self.__threadedscanner_.previews[filename]
-        del self.__threadedscanner_.previews[filename]
+        preview = self.__scanner_.previews[filename]
+        del self.__scanner_.previews[filename]
 
         # Création du pixmap
         pixmap = QPixmap()
@@ -157,19 +157,19 @@ class ScanWidget(QWidget):
     def __connectedToScanner_(self):
         # Affichage du répertoire public
         self.__basewidget_.imageList.clear()
-        self.__threadedscanner_.getFolders()
-        self.__threadedscanner_.wait()
-        self.__threadedscanner_.getFiles()
-        self.__threadedscanner_.wait()
+        self.__scanner_.getFolders()
+        self.__scanner_.wait()
+        self.__scanner_.getFiles()
+        self.__scanner_.wait()
 
     def __foldersListReceived_(self):
-        for folder in self.__threadedscanner_.folders:
+        for folder in self.__scanner_.folders:
             self.__basewidget_.folder.addItem(folder)
             
         self.setEnabled(True)
 
     def __filesListReceived_(self):
-        self.__scanned_files_ = self.__threadedscanner_.files
+        self.__scanned_files_ = self.__scanner_.files
         
         # Récupération du preview des images
         # @todo: Preview avec un filename non fixe
@@ -185,7 +185,7 @@ class ScanWidget(QWidget):
 
             # Récupération des previews
             self.__nb_preview_received_ = 0
-            self.__threadedscanner_.getPreviews(filenames)
+            self.__scanner_.getPreviews(filenames)
         else:
             self.__basewidget_.refresh.setEnabled(True)
             self.__basewidget_.folder.setEnabled(True)
@@ -209,7 +209,7 @@ class ScanWidget(QWidget):
                                           "from the scanner?" % filename, 
                                           QMessageBox.Yes, QMessageBox.No)
             if result == QMessageBox.Yes:
-                self.__threadedscanner_.deleteFile(filename)
+                self.__scanner_.deleteFile(filename)
 
     def __ui_save_clicked_(self):
         filename = self.currentFilename()
@@ -234,7 +234,7 @@ class ScanWidget(QWidget):
 
     def __ui_folder_currentChanged_(self, folder):
         folder = str(folder)
-        self.__threadedscanner_.setFolder(folder)
+        self.__scanner_.setFolder(folder)
 
     def __ui_imageList_currentChanged_(self, filename):
         filename = str(filename)
@@ -279,7 +279,7 @@ class ScanWidget(QWidget):
             else:
                 self.__basewidget_.color.addItem("Black and White")
 
-            if not self.__threadedscanner_.isRunning():
+            if not self.__scanner_.isRunning():
                 self.__basewidget_.delete.setEnabled(True)
                 self.__basewidget_.save.setEnabled(True)
             self.__basewidget_.format.setEnabled(True)
@@ -346,8 +346,8 @@ class ScanWidget(QWidget):
         self.__basewidget_.folder.setEnabled(False)
         self.__basewidget_.imageList.clear()
 
-        self.__threadedscanner_.getFiles()
-        self.__threadedscanner_.wait()
+        self.__scanner_.getFiles()
+        self.__scanner_.wait()
 
     def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
         self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
@@ -399,7 +399,7 @@ class ScanWidget(QWidget):
             return 1
 
     def connectToScanner(self, host, port):
-        self.__threadedscanner_.connectToScanner(host, port)
+        self.__scanner_.connectToScanner(host, port)
     
     def disconnect(self):
-        self.__threadedscanner_.disconnect()
+        self.__scanner_.disconnect()

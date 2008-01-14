@@ -30,7 +30,7 @@ protocol.txt
 @version: 0.1
 """
 
-__all__ = ["XeroxC2424", "ProtectedError", "SocketError"]
+__all__ = ["XeroxC2424", "ProtectedError", "SocketError", "NoPreviewError"]
 
 import socket
 
@@ -56,9 +56,10 @@ class XeroxC2424:
     FORMAT_PDF  = "pdf"
     FORMAT_JPEG = "jpeg"
 
-    def __init__(self):
+    def __init__(self, debug = False):
         self.__socket_ = None
         self.connected = False
+        self.__debug_ = debug
 
     def __del__(self):
         if self.connected is True:
@@ -77,6 +78,12 @@ class XeroxC2424:
         self.__socket_.close()
         self.__socket_ = None
         self.connected = False
+    
+    def __set_debug_(self, debug):
+        self.__debug_ = debug
+    def __get_debug_(self):
+        return self.__debug_
+    debug = property(__get_debug_, __set_debug_, None, "debug verbose mode")
 
     #
     # Start of some useful functions
@@ -101,12 +108,14 @@ class XeroxC2424:
                 send_command = self.__add_param_(send_command, params)
 
         self.__socket_.send("%s\n" % send_command)
-        print "S:", send_command
+        if self.debug:
+            print "S:", send_command
         result = self.__get_result_(RECV_BUF_SIZE)
-        if command != "sendblock":
-            print result
-        else:
-            print "received data"
+        if self.debug:
+            if command != "sendblock":
+                print result
+            else:
+                print "received data"
         return result
 
     def __send_command_bool_(self, command, params = None):
@@ -213,7 +222,8 @@ class XeroxC2424:
             folders.append(folder.split("\t")[1])
 
         if len(folders) != folderscount:
-            raise ValueError("Folder count is invalid: %s vs %s" % (folderscount, len(folders)))
+            raise ValueError("Folder count is invalid: %s vs %s" % \
+                             (folderscount, len(folders)))
 
         return folders
 
@@ -268,7 +278,7 @@ class XeroxC2424:
             password = "-1"
             
         if self.__send_command_bool_("setpassword", password) == False:
-            raise ValueError("There is a problem setting the password")
+            raise ProtectedError("Password must be a number between 1 and 9999")
                 
         result = self.__send_command_("setfolder", folder)[:-1].split("\t")
         if result[0] == "error":
@@ -283,11 +293,13 @@ class XeroxC2424:
         """Get a file from the scanner
 
         @param filename: The file name of the file
-        @param page: The page number to get (None for all (only with a pdf file))
+        @param page: The page number to get (None for all (only with a pdf
+            file))
         @param format: The file format to get (png is supported, but converted
             from tiff on the client side)
         @param resolution: The horizontal and vertical resolutions of the file. 
-            The minimum resolution is used by default to be sure there will be no errors
+            The minimum resolution is used by default to be sure there will be
+            no errors
 
         @type filename: str
         @type page: int
