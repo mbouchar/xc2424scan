@@ -324,7 +324,8 @@ class XeroxC2424:
 
         # Save the requested pages
         if format == self.FORMAT_PDF:
-            # If we are saving a pdf file, we have to get all pages
+            # If we are saving a pdf file, we have to get all pages at the same
+            # time
             self.__setpage_()
             self.__save_file_data_(save_filename)
         else:

@@ -21,9 +21,6 @@
 This is the main widget of the xc2424scan application
 This widget is self contained and can be included in any other Qt4
 application.
-
-@author: Mathieu Bouchard
-@version: 0.1
 """
 
 __all__ = ["ScanWidget"]
@@ -39,8 +36,17 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
 class ScanWidget(QWidget):
+    """The main scanning widget"""
+    
     # @todo: Les widgets doivent être désactivés par défaut
     def __init__(self, parent = None, debug = False):
+        """Create a new scanning widget
+        
+        @param parent: The parent widget
+        @type parent: QWidget
+        @param debug: verbose mode or not
+        @type debug: bool
+        """
         QWidget.__init__(self, parent)
         self.__basewidget_ = Ui_ScanWidgetBase()
         self.__basewidget_.setupUi(self)
@@ -51,19 +57,20 @@ class ScanWidget(QWidget):
         self.__scanned_files_ = None
         # Last folder visited (see __showFolder_)
         self.__last_folder_ = None
-        # Nombre de previews affichés
+        # Number of previews that are shown
         self.__nb_preview_received_ = 0
-        # Dernier répertoire visité
+        # Last folder visited
+        # @todo: Il y a deux last folder
         self.__old_folder_ = "Public"
         
-        # UI: Boutons
+        # UI: Buttons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
                         self.__ui_refresh_clicked_)
         QObject.connect(self.__basewidget_.delete, SIGNAL("clicked()"),
                         self.__ui_delete_clicked_)
         QObject.connect(self.__basewidget_.save, SIGNAL("clicked()"),
                         self.__ui_save_clicked_)
-        # UI: Options modifiées
+        # UI: An option has been modified
         QObject.connect(self.__basewidget_.folder, SIGNAL("activated(const QString&)"),
                         self.__ui_folder_currentChanged_)
         QObject.connect(self.__basewidget_.imageList, SIGNAL("currentTextChanged(const QString&)"),
@@ -79,28 +86,43 @@ class ScanWidget(QWidget):
         QObject.connect(self.__scanner_, SIGNAL("currentFolder(const QString&)"),
                         self.__currentFolderReceived_)
         QObject.connect(self.__scanner_, SIGNAL("folderSet(const QString&)"),
-                        self.__folderSet_)
+                        self.__folderSetReceived_)
         QObject.connect(self.__scanner_, SIGNAL("folderProtected(const QString&)"),
-                        self.__folderProtected_)
+                        self.__folderProtectedReceived_)
         QObject.connect(self.__scanner_, SIGNAL("fileReceived(const QString&)"),
                         self.__fileReceived_)
         QObject.connect(self.__scanner_, SIGNAL("previewReceived(const QString&)"),
                         self.__previewReceived_)
         QObject.connect(self.__scanner_, SIGNAL("fileDeleted(const QString&)"),
-                        self.__fileDeleted_)
+                        self.__fileDeletedReceived_)
         QObject.connect(self.__scanner_, SIGNAL("connectedToScanner()"),
-                        self.__connectedToScanner_)
+                        self.__connectedToScannerReceived_)
+        
+        self.__lock_()
 
     #
-    # Fonctions connectées aux threads
+    # Methods connected to thread signals
     #
+    def __connectedToScannerReceived_(self):
+        """Called when we are connected to a new scanner"""
+        # Show the public directory
+        # @todo: Est-ce que la fenêtre est gelée pendant ce temps? OUI
+        print "<-- Connected to scanner"
+        self.__basewidget_.imageList.clear()
+        self.__scanner_.getFolders()
+        self.__scanner_.wait()
+        self.__scanner_.getFilesList()
+        self.__scanner_.wait()
+
     def __currentFolderReceived_(self, folder):
-        pass
+        print "<-- Current folder is:", folder
     
-    def __folderSet_(self, folder):
+    def __folderSetReceived_(self, folder):
+        print "<-- Folder has been set:", folder
         self.__refreshPreviews_()
     
-    def __folderProtected_(self, folder):
+    def __folderProtectedReceived_(self, folder):
+        print "<-- Protected folder:", folder
         # @todo: si on appuye sur cancel, il faut remettre l'ancien répertoire dans la liste
         # @todo: on doit désactiver la liste lors de la récupération des previews
         folder = str(folder)
@@ -111,11 +133,15 @@ class ScanWidget(QWidget):
 
         if result is True:
             self.__scanner_.setFolder(folder, str(password))
+        else:
+            self.__unlock_()
                 
     def __fileReceived_(self, filename):
-        pass
+        print "<-- Received file:", filename
+        self.__unlock_()
     
     def __previewReceived_(self, filename):
+        print "<-- Preview received:", filename
         self.__nb_preview_received_ += 1
         
         filename = str(filename)
@@ -149,35 +175,30 @@ class ScanWidget(QWidget):
                 self.__basewidget_.delete.setEnabled(True)
                 self.__basewidget_.save.setEnabled(True)
     
-    def __fileDeleted_(self, filename):
+    def __fileDeletedReceived_(self, filename):
+        print "<-- File deleted:", filename
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         item = self.__basewidget_.imageList.takeItem(self.__basewidget_.imageList.row(items[0]))
         del item
     
-    def __connectedToScanner_(self):
-        # Affichage du répertoire public
-        self.__basewidget_.imageList.clear()
-        self.__scanner_.getFolders()
-        self.__scanner_.wait()
-        self.__scanner_.getFiles()
-        self.__scanner_.wait()
-
     def __foldersListReceived_(self):
+        print "<-- Received folder listing"
         for folder in self.__scanner_.folders:
             self.__basewidget_.folder.addItem(folder)
             
         self.setEnabled(True)
 
     def __filesListReceived_(self):
+        print "<-- Received files listing"
         self.__scanned_files_ = self.__scanner_.files
         
         # Récupération du preview des images
-        # @todo: Preview avec un filename non fixe
         if len(self.__scanned_files_) != 0:
             filenames = self.__scanned_files_.keys()
             filenames.sort()
             # Affichage des fichiers
             pixmap = QPixmap()
+            # @todo: Ce filename ne devrait pas être fixe
             pixmap.load("/usr/share/xc2424scan/waitingpreview.png")
 
             for filename in filenames:
@@ -186,12 +207,11 @@ class ScanWidget(QWidget):
             # Récupération des previews
             self.__nb_preview_received_ = 0
             self.__scanner_.getPreviews(filenames)
-        else:
-            self.__basewidget_.refresh.setEnabled(True)
-            self.__basewidget_.folder.setEnabled(True)
+
+        self.__unlock_()
     
     #
-    # Fonctions connectées à l'interface graphique
+    # Methods connected to the UI
     #
     def __ui_refresh_clicked_(self):
         """
@@ -202,6 +222,7 @@ class ScanWidget(QWidget):
         self.__refreshPreviews_()
 
     def __ui_delete_clicked_(self):
+        print "--> Deleting file"
         filename = self.currentFilename()
         if filename is not None:
             result = QMessageBox.question(self, "Confirmation of file deletion",
@@ -213,6 +234,8 @@ class ScanWidget(QWidget):
 
     def __ui_save_clicked_(self):
         filename = self.currentFilename()
+        
+        # Check if a file has been selected
         if filename is not None:
                 save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
                 if save_filename != "":
@@ -223,16 +246,17 @@ class ScanWidget(QWidget):
                         dpi = self.__scanned_files_[filename]["dpi"]
                     samplesize = self.getSamplesize()
                     
-                    # @todo: Partir une thread pour le transfer
-                    if format != "pdf" and len(pages) > 1:
-                        for page in pages:
-                            save_filename_x = "%s-%d%s" % (os.path.splitext(save_filename)[0], page, 
-                                                           os.path.splitext(save_filename)[1])
-                            self.__savePage_(filename, page, format, dpi, samplesize, save_filename_x)
-                    else:
-                        self.__savePage_(filename, pages[0], format, dpi, samplesize, save_filename)
+                    self.__lock_()
+                    # @todo: Show progress dialog here
+                    self.__scanner_.getFile(filename, save_filename, pages,
+                                            format, dpi, samplesize)
+        else:
+            print "WARNING: No file selected (save), this should not happen"
 
     def __ui_folder_currentChanged_(self, folder):
+        print "--> Changing folder"
+        self.__lock_()
+        
         folder = str(folder)
         self.__scanner_.setFolder(folder)
 
@@ -296,16 +320,18 @@ class ScanWidget(QWidget):
         self.__basewidget_.color.setEnabled(True)
     
     #
-    # Autres fonctions
+    # Other methods
     #
     def __refreshFilesList_(self):
+        print "--> Refreshing file list"
         # @todo: Il va y avoir pas mal plus de stock à mettre disabled
         self.__basewidget_.refresh.setEnabled(False)
         self.__basewidget_.delete.setEnabled(False)
         self.__basewidget_.imageList.clear()
 
         # Ajout des fichiers présents dans le répertoire
-        self.__scanned_files_ = self.__scanner_.getFiles()
+        # @todo: Ca ne fonctionnera pas ca:
+        self.__scanned_files_ = self.__scanner_.getFilesList()
         painter = QPainter()
         painter.setPen(Qt.black);
 
@@ -334,31 +360,52 @@ class ScanWidget(QWidget):
         if self.__basewidget_.imageList.currentItem() != None:
             self.__basewidget_.delete.setEnabled(True)
     
+    def __refreshPreviews_(self):
+        print "--> Refreshing previews"
+        self.__lock_()
+
+        self.__basewidget_.imageList.clear()
+        self.__scanner_.getFilesList()
+
+    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
+        print "--> Getting file"
+        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
+                                samplesize)
+
     def __clearOptions_(self):
         self.__basewidget_.page.clear()
         self.__basewidget_.resolution.clear()
         self.__basewidget_.color.clear()
     
-    def __refreshPreviews_(self):
+    def __lock_(self):
         self.__basewidget_.refresh.setEnabled(False)
-        self.__basewidget_.delete.setEnabled(False)
-        self.__basewidget_.save.setEnabled(False)
         self.__basewidget_.folder.setEnabled(False)
-        self.__basewidget_.imageList.clear()
 
-        self.__scanner_.getFiles()
-        self.__scanner_.wait()
+        self.__basewidget_.save.setEnabled(False)
+        self.__basewidget_.delete.setEnabled(False)
+        self.__basewidget_.format.setEnabled(False)
+        self.__basewidget_.page.setEnabled(False)
+        self.__basewidget_.resolution.setEnabled(False)
+        self.__basewidget_.color.setEnabled(False)
 
-    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
-        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
-                                samplesize)
+    def __unlock_(self):
+        self.__basewidget_.refresh.setEnabled(True)
+        self.__basewidget_.folder.setEnabled(True)
+        
+        if self.currentFilename() is not None:
+            self.__basewidget_.save.setEnabled(True)
+            self.__basewidget_.delete.setEnabled(True)
+            self.__basewidget_.format.setEnabled(True)
+            self.__basewidget_.page.setEnabled(True)
+            self.__basewidget_.resolution.setEnabled(True)
+            self.__basewidget_.color.setEnabled(True)
 
     #
     # API public
     #
     def currentFilename(self):
         currentItem = self.__basewidget_.imageList.currentItem()
-        # Vérification inutile, car le bouton delete est activ seulemen
+        # Vérification inutile, car le bouton delete est activé seulement
         # s'il y a un item sélectionné, mais on ne sais jamais
         if currentItem is not None:
             return str(currentItem.text())
@@ -399,7 +446,9 @@ class ScanWidget(QWidget):
             return 1
 
     def connectToScanner(self, host, port):
+        print "--> Connecting to scanner"
         self.__scanner_.connectToScanner(host, port)
     
     def disconnect(self):
+        print "--> Disconnecting from scanner"
         self.__scanner_.disconnect()

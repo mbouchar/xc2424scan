@@ -28,6 +28,7 @@ from PyQt4.QtCore import QString, QThread, SIGNAL
 
 from xc2424scan.scanlib import XeroxC2424, ProtectedError
 
+# @todo: Envoyer les résultats dans les signaux (ceux qui ne sont pas encore faits)
 class ThreadedXeroxC2424(QThread):
     """@todo: Créer un mutex pour qu'une seule fonction soit exécutée à la fois
     """
