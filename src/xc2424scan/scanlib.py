@@ -159,11 +159,15 @@ class XeroxC2424:
             
         return file_data
 
-    def __save_file_data_(self, filename):
+    def __save_file_data_(self, filename, progress_hook):
         save_file = file(filename, "w")
         
         received_size = RECV_BUF_SIZE
+        progress = 0
         while received_size != 0:
+            progress_hook(progress)
+            # @todo: We need to know how to progress correctly
+            progress += 1
             cur_data = self.__send_command_("sendblock", FILE_BUF_SIZE)
             received_size = self.__get_received_size_(cur_data)
             cur_data = cur_data[len("sending\t%d\n" % received_size):]
@@ -289,7 +293,8 @@ class XeroxC2424:
                 raise ValueError("The folder %s doesn't exists" % folder)
 
     def getFile(self, filename, save_filename, pages = None, 
-                format = FORMAT_TIFF, dpi = [100, 100], samplesize = 24):
+                format = FORMAT_TIFF, dpi = [100, 100], samplesize = 24,
+                newpage_hook = None, progress_hook = None):
         """Get a file from the scanner
 
         @param filename: The file name of the file
@@ -327,14 +332,15 @@ class XeroxC2424:
             # If we are saving a pdf file, we have to get all pages at the same
             # time
             self.__setpage_()
-            self.__save_file_data_(save_filename)
+            self.__save_file_data_(save_filename, progress_hook)
         else:
             for page in pages:
+                newpage_hook(page, len(pages))
                 self.__setpage_(page)
                 save_filename_x = "%s%d%s" % \
                                   (os.path.splitext(save_filename)[0], page, 
                                    os.path.splitext(save_filename)[1])
-                self.__save_file_data_(save_filename_x)
+                self.__save_file_data_(save_filename_x, progress_hook)
 
     def getPreview(self, filename):
         """Get the preview of a file
