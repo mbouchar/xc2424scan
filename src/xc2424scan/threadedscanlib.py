@@ -60,16 +60,16 @@ class ThreadedXeroxC2424(QThread):
     #
     # Gets the files list
     #
-    def __getFiles_(self):
-        self.files = self.__scanner_.getFiles()
+    def __getFilesList_(self):
+        self.files = self.__scanner_.getFilesList()
         self.emit(SIGNAL("filesList()"))
     
-    def getFiles(self):
-        self.__method_ = self.__getFiles_
+    def getFilesList(self):
+        self.__method_ = self.__getFilesList_
         self.start()
     
     #
-    # Gets the name of the current folder
+    # Get the name of the current folder
     #
     def __getCurrentFolder_(self):
         folder = self.__scanner_.getCurrentFolder()
@@ -101,20 +101,20 @@ class ThreadedXeroxC2424(QThread):
     def __getFile_(self):
         self.__scanner_.getFile(self.__params_["filename"],
                                 self.__params_["save_filename"],
-                                self.__params_["page"],
+                                self.__params_["pages"],
                                 self.__params_["format"],
                                 self.__params_["dpi"],
                                 self.__params_["samplesize"])
         self.emit(SIGNAL("fileReceived(const QString&)"),
                   self.__params_["filename"])
     
-    def getFile(self, filename, save_filename, page = None, 
+    def getFile(self, filename, save_filename, pages = None, 
                 format = XeroxC2424.FORMAT_TIFF, dpi = [100, 100], 
                 samplesize = 24):
         self.__method_ = self.__getFile_
         self.__params_ = {"filename": filename,
                           "save_filename": save_filename,
-                          "page": page,
+                          "pages": pages,
                           "format": format,
                           "dpi": dpi,
                           "samplesize": samplesize}
