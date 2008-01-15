@@ -46,11 +46,7 @@ class ThreadedXeroxC2424(QThread):
     def __startMethod_(self, method, params = None):
         if self.isRunning():
             print "WARNING: Thread still running, waiting"
-            #self.terminate()
             self.wait()
-
-        if self.__method_ is not None or self.__params_ is not None:
-            print "WARNING: a method has already been defined, replacing"
 
         self.__method_ = method
         self.__params_ = params
@@ -170,7 +166,6 @@ class ThreadedXeroxC2424(QThread):
 
     def run(self):
         try:
-            print "Starting:", self.__method_.__name__
             self.__method_()
         except Exception, e:
             self.emit(SIGNAL("scanlibError(const QString&)"), str(e))
