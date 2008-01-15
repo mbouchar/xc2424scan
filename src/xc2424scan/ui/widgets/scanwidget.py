@@ -35,6 +35,9 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
+class ProgressDialog(QDialog):
+    pass
+
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
