@@ -27,7 +27,8 @@ __all__ = ["ScanWidget"]
 
 from PyQt4.QtCore import QDir, QObject, QRect, Qt, SIGNAL
 from PyQt4.QtGui import QWidget, QFileDialog, QListWidgetItem, QPixmap, \
-                        QIcon, QMessageBox, QInputDialog, QLineEdit, QPainter
+                        QIcon, QMessageBox, QInputDialog, QLineEdit, QPainter, \
+                        QProgressDialog, QMessageBox, QSizePolicy
 import os
 
 from xc2424scan.threadedscanlib import ThreadedXeroxC2424
@@ -35,13 +36,22 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
-class ProgressDialog(QDialog):
-    pass
+# @todo: Faire un catch des erreurs et afficher un dialogue (envoyer un signal error lorsque la thread ne fonctionne pas)
+class ProgressDialog(QProgressDialog):
+    def newpage(self, current_page, nbr_pages_total):
+        print "Received new page signal"
+        if nbr_pages_total == 1:
+            self.setLabelText(_("Getting page %d") % current_page)
+        else:
+            self.setLabelText(_("Getting page %d of %d") % \
+                              (current_page, nbr_pages_total))
+    
+    def progress(self, percentage):
+        self.setValue(percentage)
 
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
-    # @todo: Les widgets doivent être désactivés par défaut
     def __init__(self, parent = None, debug = False):
         """Create a new scanning widget
         
@@ -101,22 +111,42 @@ class ScanWidget(QWidget):
         QObject.connect(self.__scanner_, SIGNAL("connectedToScanner()"),
                         self.__connectedToScannerReceived_)
         
+        QObject.connect(self.__scanner_, SIGNAL("scanlibError(const QString&)"),
+                        self.__scanlibErrorReceived)
+
+        # Progress dialog        
+        self.__progress_ = ProgressDialog(self)
+        self.__progress_.setWindowTitle(_("Download progress"))
+        self.__progress_.setWindowModality(Qt.WindowModal)
+        self.__progress_.setFixedSize(self.__progress_.size())
+        self.__progress_.setLabelText(_("Beginning"))
+        self.__progress_.setRange(0, 100)
+        QObject.connect(self.__scanner_, SIGNAL("newPage(int, int)"),
+                        self.__progress_.newpage)
+        QObject.connect(self.__scanner_, SIGNAL("progress(int)"),
+                        self.__progress_.progress)
+        QObject.connect(self.__progress_, SIGNAL("cancelled()"),
+                        self.__ui_progress_cancelled_)
+
         self.__lock_()
 
     #
     # Methods connected to thread signals
     #
+    def __scanlibErrorReceived(self, text):
+        QMessageBox.critical(self, "Critical error", text)
+    
     def __connectedToScannerReceived_(self):
         """Called when we are connected to a new scanner"""
         # Show the public directory
-        # @todo: Est-ce que la fenêtre est gelée pendant ce temps? OUI
         print "<-- Connected to scanner"
         self.__basewidget_.imageList.clear()
+        # @todo: Est-ce que la fenêtre est gelée pendant ce temps? OUI
         self.__scanner_.getFolders()
         self.__scanner_.wait()
-        self.__scanner_.getFilesList()
-        self.__scanner_.wait()
+        self.__refreshPreviews_()
 
+    # @todo: Not used
     def __currentFolderReceived_(self, folder):
         print "<-- Current folder is:", folder
     
@@ -130,6 +160,7 @@ class ScanWidget(QWidget):
         # @todo: on doit désactiver la liste lors de la récupération des previews
         folder = str(folder)
         
+        # @todo: there is a ugly thing in down-right corner of dialog
         password, result = QInputDialog.getText(self, "Accessing a protected folder",
                                         "Please enter the password for the protected " \
                                         "folder %s" % folder, QLineEdit.Password)
@@ -141,6 +172,7 @@ class ScanWidget(QWidget):
                 
     def __fileReceived_(self, filename):
         print "<-- Received file:", filename
+        self.__progress_.hide()
         self.__unlock_()
     
     def __previewReceived_(self, filename):
@@ -209,6 +241,7 @@ class ScanWidget(QWidget):
 
             # Récupération des previews
             self.__nb_preview_received_ = 0
+            print "--> Requesting previews"
             self.__scanner_.getPreviews(filenames)
 
         self.__unlock_()
@@ -236,6 +269,7 @@ class ScanWidget(QWidget):
                 self.__scanner_.deleteFile(filename)
 
     def __ui_save_clicked_(self):
+        print "--> Saving file"
         filename = self.currentFilename()
         
         # Check if a file has been selected
@@ -250,12 +284,16 @@ class ScanWidget(QWidget):
                     samplesize = self.getSamplesize()
                     
                     self.__lock_()
-                    # @todo: Show progress dialog here
                     self.__scanner_.getFile(filename, save_filename, pages,
                                             format, dpi, samplesize)
+                    self.__progress_.setLabelText(_("Waiting for transfer to begin"))
+                    self.__progress_.setValue(0)
+                    self.__progress_.show()
         else:
             print "WARNING: No file selected (save), this should not happen"
 
+    # @todo: If we choose the same folder, do not send the socket commands, just cancel
+    # @todo: Why there are file informations when we change the folder?
     def __ui_folder_currentChanged_(self, folder):
         print "--> Changing folder"
         self.__lock_()
@@ -264,6 +302,7 @@ class ScanWidget(QWidget):
         self.__scanner_.setFolder(folder)
 
     def __ui_imageList_currentChanged_(self, filename):
+        print "--- Selected file:", filename
         filename = str(filename)
         
         if filename == "":
@@ -322,6 +361,12 @@ class ScanWidget(QWidget):
         self.__basewidget_.resolution.setEnabled(True)
         self.__basewidget_.color.setEnabled(True)
     
+    def __ui_progress_cancelled_(self):
+        # @todo: mmm, ce n'est pas super, on doit aussi supprimer les fichiers?
+        self.__scanner_.terminate()
+        self.__scanner_.wait()
+        self.__unlock_()
+    
     #
     # Other methods
     #
@@ -342,7 +387,6 @@ class ScanWidget(QWidget):
             # Récupération du preview de l'image
             pixmap = QPixmap()
             try:
-                # @todo: Preview avec un filename non fixe
                 preview = self.__scanner_.getPreview(filename)
                 pixmap.loadFromData(preview)
                 
@@ -383,6 +427,7 @@ class ScanWidget(QWidget):
     def __lock_(self):
         self.__basewidget_.refresh.setEnabled(False)
         self.__basewidget_.folder.setEnabled(False)
+        self.__basewidget_.imageList.setEnabled(False)
 
         self.__basewidget_.save.setEnabled(False)
         self.__basewidget_.delete.setEnabled(False)
@@ -394,6 +439,7 @@ class ScanWidget(QWidget):
     def __unlock_(self):
         self.__basewidget_.refresh.setEnabled(True)
         self.__basewidget_.folder.setEnabled(True)
+        self.__basewidget_.imageList.setEnabled(True)
         
         if self.currentFilename() is not None:
             self.__basewidget_.save.setEnabled(True)
