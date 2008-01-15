@@ -18,8 +18,7 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 """
-@author: Mathieu Bouchard
-@version: 0.1
+@todo: Some documentation
 """
 
 __all__ = ["ThreadedXeroxC2424"]
@@ -30,9 +29,6 @@ from xc2424scan.scanlib import XeroxC2424, ProtectedError
 
 # @todo: Envoyer les résultats dans les signaux (ceux qui ne sont pas encore faits)
 class ThreadedXeroxC2424(QThread):
-    """@todo: Créer un mutex pour qu'une seule fonction soit exécutée à la fois
-    """
-    
     def __init__(self, debug = False):
         """
         """
@@ -46,7 +42,21 @@ class ThreadedXeroxC2424(QThread):
         self.files = None
         self.folders = None
         self.previews = {}
+
+    def __startMethod_(self, method, params = None):
+        if self.isRunning():
+            print "WARNING: Thread still running, waiting"
+            #self.terminate()
+            self.wait()
+
+        if self.__method_ is not None or self.__params_ is not None:
+            print "WARNING: a method has already been defined, replacing"
+
+        self.__method_ = method
+        self.__params_ = params
         
+        self.start()
+
     #
     # Gets the folder list
     #
@@ -55,8 +65,7 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("foldersList()"))
 
     def getFolders(self):
-        self.__method_ = self.__getFolders_
-        self.start()
+        self.__startMethod_(self.__getFolders_)
         
     #
     # Gets the files list
@@ -66,8 +75,7 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("filesList()"))
     
     def getFilesList(self):
-        self.__method_ = self.__getFilesList_
-        self.start()
+        self.__startMethod_(self.__getFilesList_)
     
     #
     # Get the name of the current folder
@@ -77,8 +85,7 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("currentFolder(const QString&)"), folder)
     
     def getCurrentFolder(self):
-        self.__method_ = self.__getCurrentFolder_
-        self.start()
+        self.__startMethod_(self.__getCurrentFolder_)
     
     #
     # Sets the current folder
@@ -92,34 +99,41 @@ class ThreadedXeroxC2424(QThread):
             self.emit(SIGNAL("folderProtected(const QString&)"), folder)
     
     def setFolder(self, folder, password = None):
-        self.__method_ = self.__setFolder_
-        self.__params_ = [folder, password]
-        self.start()
+        self.__startMethod_(self.__setFolder_, params = [folder, password])
     
     #
     # Gets a file from the scanner
     #
+    def __newPageHook_(self, current_page, nbr_pages_total):
+        self.emit(SIGNAL("newPage(int, int)"),
+                  current_page, nbr_pages_total)
+    
+    def __progressHook_(self, percentage):
+        self.emit(SIGNAL("progress(int)"), percentage)
+    
     def __getFile_(self):
+        # @todo: envoyer des signaux de façon régulière lors du progrès
         self.__scanner_.getFile(self.__params_["filename"],
                                 self.__params_["save_filename"],
-                                self.__params_["pages"],
-                                self.__params_["format"],
-                                self.__params_["dpi"],
-                                self.__params_["samplesize"])
+                                pages = self.__params_["pages"],
+                                format = self.__params_["format"],
+                                dpi = self.__params_["dpi"],
+                                samplesize = self.__params_["samplesize"],
+                                newpage_hook = self.__newPageHook_,
+                                progress_hook = self.__progressHook_)
         self.emit(SIGNAL("fileReceived(const QString&)"),
                   self.__params_["filename"])
     
     def getFile(self, filename, save_filename, pages = None, 
                 format = XeroxC2424.FORMAT_TIFF, dpi = [100, 100], 
                 samplesize = 24):
-        self.__method_ = self.__getFile_
-        self.__params_ = {"filename": filename,
-                          "save_filename": save_filename,
-                          "pages": pages,
-                          "format": format,
-                          "dpi": dpi,
-                          "samplesize": samplesize}
-        self.start()
+        self.__startMethod_(self.__getFile_,
+                            {"filename": filename,
+                             "save_filename": save_filename,
+                             "pages": pages,
+                             "format": format,
+                             "dpi": dpi,
+                             "samplesize": samplesize})
     
     #
     # Gets the preview of a file
@@ -129,11 +143,9 @@ class ThreadedXeroxC2424(QThread):
         for filename in self.__params_:
             self.previews[filename] = self.__scanner_.getPreview(filename)
             self.emit(SIGNAL("previewReceived(const QString&)"), QString(filename))
-    
+
     def getPreviews(self, filenames):
-        self.__method_ = self.__getPreviews_
-        self.__params_ = filenames
-        self.start()
+        self.__startMethod_(self.__getPreviews_, params = filenames)
     
     #
     # Delete a file from the scanner
@@ -143,23 +155,25 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("fileDeleted(const QString&)"), self.__params_)
     
     def deleteFile(self, filename):
-        self.__method_ = self.__deleteFile_
-        self.__params_ = filename
-        self.start()
+        self.__startMethod_(self.__deleteFile_, params = filename)
         
     #
     # Connect to the scanner
     #
     def __connectToScanner_(self):
-        self.__scanner_.connect(self.__host_, self.__port_)
+        host, port = self.__params_
+        self.__scanner_.connect(host, port)
         self.emit(SIGNAL("connectedToScanner()"))
         
     def connectToScanner(self, host, port):
-        self.__method_ = self.__connectToScanner_
-        self.__host_ = host
-        self.__port_ = port
-        self.start()
+        self.__startMethod_(self.__connectToScanner_, params = [host, port])
 
     def run(self):
-        # @todo: Créer un mutex
-        self.__method_()
+        try:
+            print "Starting:", self.__method_.__name__
+            self.__method_()
+        except Exception, e:
+            self.emit(SIGNAL("scanlibError(const QString&)"), str(e))
+
+        self.__method_ = None
+        self.__params_ = None
