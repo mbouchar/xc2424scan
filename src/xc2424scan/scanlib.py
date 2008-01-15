@@ -32,7 +32,7 @@ protocol.txt
 
 __all__ = ["XeroxC2424", "ProtectedError", "SocketError", "NoPreviewError"]
 
-import socket
+import os, socket
 
 RECV_BUF_SIZE = 1500
 FILE_BUF_SIZE = 10240
@@ -130,7 +130,7 @@ class XeroxC2424:
             result = self.__socket_.recv(buffer_size)
         except socket.timeout:
             # @todo: Do something about this
-            raise Exception("Socket timed out")
+            raise SocketError("Socket timed out")
         return result
         
     def __get_received_size_(self, data):
@@ -227,7 +227,7 @@ class XeroxC2424:
 
         return folders
 
-    def getFiles(self):
+    def getFilesList(self):
         """Used to get the files listing
         
         filename, nbpages, resolution[0:horiz, 1:vert]
@@ -288,7 +288,7 @@ class XeroxC2424:
             else:
                 raise ValueError("The folder %s doesn't exists" % folder)
 
-    def getFile(self, filename, save_filename, page = None, 
+    def getFile(self, filename, save_filename, pages = None, 
                 format = FORMAT_TIFF, dpi = [100, 100], samplesize = 24):
         """Get a file from the scanner
 
@@ -317,17 +317,23 @@ class XeroxC2424:
         self.__setusage_([1, 2])
         # Set the file format
         self.__setformat_(format)
-        # Set the page number
-        if format == self.FORMAT_PDF:
-            self.__setpage_()
-        else:
-            self.__setpage_(page)
         # Set the resolution
         self.__setresolution_(dpi)
         # Set the sample size
         self.__setsamplesize_(samplesize)
 
-        self.__save_file_data_(save_filename)
+        # Save the requested pages
+        if format == self.FORMAT_PDF:
+            # If we are saving a pdf file, we have to get all pages
+            self.__setpage_()
+            self.__save_file_data_(save_filename)
+        else:
+            for page in pages:
+                self.__setpage_(page)
+                save_filename_x = "%s%d%s" % \
+                                  (os.path.splitext(save_filename)[0], page, 
+                                   os.path.splitext(save_filename)[1])
+                self.__save_file_data_(save_filename_x)
 
     def getPreview(self, filename):
         """Get the preview of a file
