@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    This file is part of the xc2424scan package
-#    Copyright (C) 2005 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
+#    Copyright (C) 2005-2008 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,10 +18,7 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 """
-This is the main form of the xc2424scan application
-
-@author: Mathieu Bouchard
-@version: 0.1
+These are the main dialogs for the xc2424scan software
 """
 
 __all__ = ["FScan"]
@@ -38,10 +35,18 @@ from xc2424scan.config import Config
 from xc2424scan import version
 
 class FScanConfig(QDialog):
+    """Configuration dialog"""
+    
     def __init__(self, parent):
+        """Create a new configuration dialog
+        
+        @param parent: Parent widget
+        @type parent: QWidget
+        """
         QDialog.__init__(self, parent)
         self.setWindowTitle(_("Configuration"))
-        
+
+        # Set the main config widget
         self.config = ConfigWidget(self)
         self.__layout_ = QVBoxLayout(self)
         self.__layout_.setMargin(0)
@@ -52,34 +57,52 @@ class FScanConfig(QDialog):
         self.connect(self.config.cancel, SIGNAL("clicked()"), self.__cancel_clicked_)
     
     def __ok_clicked_(self):
+        """This is called when the user click on the OK button"""
         self.accept()
         
     def __cancel_clicked_(self):
+        """This is called when the user click on the Cancel button or close the
+        dialog"""
         self.reject()
         
 class FScan(QMainWindow):
+    """This is the main windown of the xc2424scan software"""
+    
     def __init__(self, parent = None):
+        """Create a new main window
+        
+        @param parent: Parent widget
+        @type parent: QWidget
+        """
         QMainWindow.__init__(self, parent)
         self.setWindowTitle(_("Xerox WorkCentre C2424 Scanner Utility v%s") %
                             version.__version__)
+        
+        # Get the software configuration (~/.xc2424scan) or show the config
+        # dialog if there is no configuration file
         self.__config_ = Config()
         if self.__config_.address is None:
             if self.__show_config_() is False:
                 sys.exit()
             self.__config_.reload()
-        
+
+        # Set the main widget        
         self.__scanWidget_ = ScanWidget(self, self.__config_.debug)
         self.setCentralWidget(self.__scanWidget_)
         
         self.__scanWidget_.connectToScanner(self.__config_.address, 
                                             self.__config_.port)
 
+        # Create the menu
         self.__setupMenu_()
 
+        # @todo: Create the status bar?
         #self.__statusbar_ = QStatusBar(self)
         #self.setStatusBar(self.__statusbar_)
 
     def __setupMenu_(self):
+        """Used to create the default menu"""
+        # Create the menu bar
         self.__menu_ = QMenuBar(self)
         self.setMenuBar(self.__menu_)
         
@@ -97,6 +120,7 @@ class FScan(QMainWindow):
         self.menuSettings.setTitle(_("&Settings"))
         self.actionConfigure.setText(_("&Configure xc2424scan"))
 
+        # Add the menus to the menu
         self.__menu_.addAction(self.menuFile.menuAction())
         self.__menu_.addAction(self.menuSettings.menuAction())
         
@@ -106,11 +130,18 @@ class FScan(QMainWindow):
                      self.__change_config_)
 
     def __change_config_(self):
+        """Called when the configuration has changed and we need to reconnect
+        to the scanner"""
         if self.__show_config_():
             self.__scanWidget_.connectToScanner(self.__config_.address, 
                                                 self.__config_.port)
 
     def __show_config_(self):
+        """Called when we need to show the config dialog
+        
+        @return: True if the config has changed, False otherwise
+        @rtype: bool
+        """
         fconfig = FScanConfig(self)
         fconfig.config.setAddress(self.__config_.address)
         fconfig.config.setPort(self.__config_.port)
