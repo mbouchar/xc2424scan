@@ -233,4 +233,4 @@ in multiple lines only for readability
                 - tellfolder
     
 For questions about the protocol, send an email to :
-Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca
+Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
