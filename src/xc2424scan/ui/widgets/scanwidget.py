@@ -36,19 +36,29 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
-# @todo: Faire un catch des erreurs et afficher un dialogue (envoyer un signal error lorsque la thread ne fonctionne pas)
 class ProgressDialog(QProgressDialog):
+    def __init__(self, parent = None):
+        QProgressDialog.__init__(self, parent)
+        self.setWindowTitle(_("Download progress"))
+
+        # Top level fixed size dialog
+        self.setWindowModality(Qt.WindowModal)
+        self.setFixedSize(self.size())
+        # Do not close the dialog after each page
+        self.setAutoClose(False)
+        self.setAutoReset(False)
+
     def newpage(self, current_page, nbr_pages_total):
-        print "Received new page signal"
         if nbr_pages_total == 1:
             self.setLabelText(_("Getting page %d") % current_page)
         else:
             self.setLabelText(_("Getting page %d of %d") % \
                               (current_page, nbr_pages_total))
     
-    def progress(self, percentage):
-        self.setValue(percentage)
+    def progress(self, received_size):
+        self.setValue(self.value() + received_size)
 
+# @todo: Ca prends 2 clicks pour sélectionner une image
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
@@ -116,11 +126,6 @@ class ScanWidget(QWidget):
 
         # Progress dialog        
         self.__progress_ = ProgressDialog(self)
-        self.__progress_.setWindowTitle(_("Download progress"))
-        self.__progress_.setWindowModality(Qt.WindowModal)
-        self.__progress_.setFixedSize(self.__progress_.size())
-        self.__progress_.setLabelText(_("Beginning"))
-        self.__progress_.setRange(0, 100)
         QObject.connect(self.__scanner_, SIGNAL("newPage(int, int)"),
                         self.__progress_.newpage)
         QObject.connect(self.__scanner_, SIGNAL("progress(int)"),
@@ -134,7 +139,10 @@ class ScanWidget(QWidget):
     # Methods connected to thread signals
     #
     def __scanlibErrorReceived(self, text):
+        if self.__progress_.isVisible():
+            self.__progress_.close()
         QMessageBox.critical(self, "Critical error", text)
+        self.__unlock_()
     
     def __connectedToScannerReceived_(self):
         """Called when we are connected to a new scanner"""
@@ -172,7 +180,8 @@ class ScanWidget(QWidget):
                 
     def __fileReceived_(self, filename):
         print "<-- Received file:", filename
-        self.__progress_.hide()
+        self.__progress_.reset()
+        self.__progress_.close()
         self.__unlock_()
     
     def __previewReceived_(self, filename):
@@ -287,6 +296,8 @@ class ScanWidget(QWidget):
                     self.__scanner_.getFile(filename, save_filename, pages,
                                             format, dpi, samplesize)
                     self.__progress_.setLabelText(_("Waiting for transfer to begin"))
+                    self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
+                    print "Range is 0", self.__scanned_files_[filename]["size"]
                     self.__progress_.setValue(0)
                     self.__progress_.show()
         else:
@@ -341,9 +352,9 @@ class ScanWidget(QWidget):
                 self.__basewidget_.resolution.addItem(dpi)
             if file_infos["samplesize"] == 24:
                 self.__basewidget_.color.addItem("Color")
-                self.__basewidget_.color.addItem("Black and White")
+                self.__basewidget_.color.addItem("Black & White")
             else:
-                self.__basewidget_.color.addItem("Black and White")
+                self.__basewidget_.color.addItem("Black & White")
 
             if not self.__scanner_.isRunning():
                 self.__basewidget_.delete.setEnabled(True)

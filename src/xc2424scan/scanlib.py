@@ -159,15 +159,12 @@ class XeroxC2424:
             
         return file_data
 
+    # @todo: Le nombre total de données transférées != taille donnée par le scanner
     def __save_file_data_(self, filename, progress_hook):
         save_file = file(filename, "w")
         
         received_size = RECV_BUF_SIZE
-        progress = 0
         while received_size != 0:
-            progress_hook(progress)
-            # @todo: We need to know how to progress correctly
-            progress += 1
             cur_data = self.__send_command_("sendblock", FILE_BUF_SIZE)
             received_size = self.__get_received_size_(cur_data)
             cur_data = cur_data[len("sending\t%d\n" % received_size):]
@@ -176,12 +173,20 @@ class XeroxC2424:
                 cur_data += self.__get_result_(RECV_BUF_SIZE)
 
             save_file.write(cur_data)
+            progress_hook(received_size)
             
         save_file.close()
 
     #
     # Start of dumb low level commands
     #
+    def __tellfilesize_(self):
+        filesize = self.__send_command_("tellfilesize")
+        try:
+            return int(filesize.strip())
+        except ValueError:
+            raise ValueError("Unable to get a valid file size")
+    
     def __setfile_(self, filename):
         if self.__send_command_bool_("setfile", filename) is not True:
             raise ValueError("%s is not a valid file" % filename)
@@ -253,8 +258,8 @@ class XeroxC2424:
                  "dpi"       : [int(curfile[4]), int(curfile[5])],
                  "resolution": [int(curfile[6]), int(curfile[7])], 
                  "samplesize": int(curfile[8]),
-                 "respreview"    : [int(curfile[9]), int(curfile[10])], 
-                 "samplepreview" : int(curfile[11])}
+                 "respreview"   : [int(curfile[9]), int(curfile[10])], 
+                 "samplepreview": int(curfile[11])}
 
         return files
 

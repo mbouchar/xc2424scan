@@ -104,11 +104,10 @@ class ThreadedXeroxC2424(QThread):
         self.emit(SIGNAL("newPage(int, int)"),
                   current_page, nbr_pages_total)
     
-    def __progressHook_(self, percentage):
-        self.emit(SIGNAL("progress(int)"), percentage)
+    def __progressHook_(self, received_size):
+        self.emit(SIGNAL("progress(int)"), received_size)
     
     def __getFile_(self):
-        # @todo: envoyer des signaux de façon régulière lors du progrès
         self.__scanner_.getFile(self.__params_["filename"],
                                 self.__params_["save_filename"],
                                 pages = self.__params_["pages"],
