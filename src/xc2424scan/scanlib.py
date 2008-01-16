@@ -319,7 +319,7 @@ class XeroxC2424:
         """
         # Set the filename
         self.__setfile_(filename)
-        # @todo: Unknown
+        # Unknown
         self.__setusage_([1, 2])
         # Set the file format
         self.__setformat_(format)
