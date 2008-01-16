@@ -91,11 +91,15 @@ class ScanWidget(QWidget):
         QObject.connect(self.__basewidget_.save, SIGNAL("clicked()"),
                         self.__ui_save_clicked_)
         # UI: An option has been modified
-        QObject.connect(self.__basewidget_.folder, SIGNAL("activated(const QString&)"),
+        QObject.connect(self.__basewidget_.folder,
+                        SIGNAL("activated(const QString&)"),
                         self.__ui_folder_currentChanged_)
-        QObject.connect(self.__basewidget_.imageList, SIGNAL("currentTextChanged(const QString&)"),
+        # UI: List widget
+        QObject.connect(self.__basewidget_.imageList,
+                        SIGNAL("currentTextChanged(const QString&)"),
                         self.__ui_imageList_currentChanged_)
-        QObject.connect(self.__basewidget_.format, SIGNAL("currentIndexChanged(const QString&)"),
+        QObject.connect(self.__basewidget_.format,
+                        SIGNAL("currentIndexChanged(const QString&)"),
                         self.__ui_format_currentChanged_)
         
         # Signals emited from threads
@@ -177,7 +181,6 @@ class ScanWidget(QWidget):
         print "<-- Protected folder:", folder
         folder = str(folder)
         
-        # @todo: there is a ugly thing in down-right corner of dialog
         password, result = QInputDialog.getText(self, "Accessing a protected folder",
                                         "Please enter the password for the protected " \
                                         "folder %s" % folder, QLineEdit.Password)
@@ -204,6 +207,7 @@ class ScanWidget(QWidget):
         """Received when we have received all previews"""
         print "<-- All previews received"
         self.__unlock_()
+        self.__basewidget_.imageList.setCurrentItem(self.__basewidget_.imageList.item(0))
 
     def __previewReceived_(self, filename):
         """Received when a preview has been received
@@ -362,16 +366,14 @@ class ScanWidget(QWidget):
             # Request the new folder        
             self.__scanner_.setFolder(folder)
 
-    # @todo: Ca prends 2 clicks pour sélectionner une image
-    # @todo: Why there are file informations when we change the folder?
     def __ui_imageList_currentChanged_(self, filename):
         """Called when the user select an image in the image list
         
         @param filename: The file name of the selected file
         @type filename: str
         """
-        print "--- Selected file: \"%s\"" % filename
         filename = str(filename)
+        print "--- Selected file: \"%s\"" % filename
         
         if filename == "":
             self.__basewidget_.info_nbPages.setText("")
