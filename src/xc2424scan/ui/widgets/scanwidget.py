@@ -31,6 +31,7 @@ from PyQt4.QtGui import QWidget, QFileDialog, QListWidgetItem, QPixmap, \
                         QProgressDialog, QMessageBox, QSizePolicy
 import os
 
+from xc2424scan import config
 from xc2424scan.threadedscanlib import ThreadedXeroxC2424
 from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
@@ -219,19 +220,16 @@ class ScanWidget(QWidget):
         # Create the pixmap item
         pixmap = QPixmap()
         if preview == None:
-            # @todo: Le prefix peut changer
-            pixmap.load("/usr/share/xc2424scan/nopreview.png")
+            pixmap.load(config.NO_PREVIEW_FILENAME)
+            width = 137
+            height = 179
         else:
             pixmap.loadFromData(preview)
+            width = self.__scanned_files_[filename]["respreview"][0] - 1
+            height = self.__scanned_files_[filename]["respreview"][1] - 1
             
         # Add a black border
-        painter = QPainter()
-        painter.setPen(Qt.black);
-        painter.begin(pixmap)
-        width = self.__scanned_files_[filename]["respreview"][0] - 1
-        height = self.__scanned_files_[filename]["respreview"][1] - 1
-        painter.drawRect(QRect(0, 0, width, height))
-        painter.end()
+        self.__add_black_border_(pixmap, width, height)
 
         # Add the new icon to the list
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
@@ -261,8 +259,8 @@ class ScanWidget(QWidget):
             filenames.sort()
             # Affichage des fichiers
             pixmap = QPixmap()
-            # @todo: Ce filename ne devrait pas être fixe
-            pixmap.load("/usr/share/xc2424scan/waitingpreview.png")
+            pixmap.load(config.WAITING_PREVIEW_FILENAME)
+            self.__add_black_border_(pixmap, 137, 179)
 
             for filename in filenames:
                 self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
@@ -400,6 +398,13 @@ class ScanWidget(QWidget):
     #
     # Other methods
     #
+    def __add_black_border_(self, pixmap, width = None, height = None):
+        painter = QPainter()
+        painter.setPen(Qt.black);
+        painter.begin(pixmap)
+        painter.drawRect(QRect(0, 0, width, height))
+        painter.end()
+
     def __refreshFilesList_(self):
         print "--> Refreshing file list"
         # @todo: Il va y avoir pas mal plus de stock à mettre disabled

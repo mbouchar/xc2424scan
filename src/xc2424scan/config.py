@@ -30,6 +30,16 @@ from ConfigParser import ConfigParser, NoSectionError, NoOptionError, \
                          DuplicateSectionError
 import sys, os
 
+FILES_PREFIX = "/usr/share/xc2424scan/images/"
+NO_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "nopreview.png")
+WAITING_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "waitingpreview.png")
+
+# If xc2424scan is not installed, use the files from the source directory
+if not os.path.isfile(NO_PREVIEW_FILENAME):
+    NO_PREVIEW_FILENAME = "data/nopreview.png"
+if not os.path.isfile(WAITING_PREVIEW_FILENAME):
+    WAITING_PREVIEW_FILENAME = "data/waitingpreview.png"
+
 class Config(object):
     
     GROUP   = "xc2424scan"
