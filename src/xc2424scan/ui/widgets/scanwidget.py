@@ -465,11 +465,6 @@ class ScanWidget(QWidget):
         self.__basewidget_.imageList.clear()
         self.__scanner_.getFilesList()
 
-    def __savePage_(self, filename, page, format, dpi, samplesize, save_filename):
-        print "--> Getting file"
-        self.__scanner_.getFile(filename, save_filename, page, format, dpi, 
-                                samplesize)
-
     def __clearOptions_(self):
         self.__basewidget_.page.clear()
         self.__basewidget_.resolution.clear()
