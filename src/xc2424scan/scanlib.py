@@ -43,8 +43,6 @@ class ProtectedError(Exception):
 class SocketError(Exception):
     pass
 
-# @todo: Gérer les problèmes de connection
-# @todo: Retourner des erreurs propriétaires au lieu des erreurs sans rapport
 class XeroxC2424:
 
     FORMAT_TIFF = "tiff"
