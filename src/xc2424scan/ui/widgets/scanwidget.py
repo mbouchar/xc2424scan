@@ -59,7 +59,6 @@ class ProgressDialog(QProgressDialog):
     def progress(self, received_size):
         self.setValue(self.value() + received_size)
 
-# @todo: Ca prends 2 clicks pour sélectionner une image
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
@@ -343,7 +342,6 @@ class ScanWidget(QWidget):
         else:
             print "WARNING: No file selected (save), this should not happen"
 
-    # @todo: Why there are file informations when we change the folder?
     def __ui_folder_currentChanged_(self, folder):
         """Called when the current folder has been changed
         
@@ -361,7 +359,14 @@ class ScanWidget(QWidget):
             # Request the new folder        
             self.__scanner_.setFolder(folder)
 
+    # @todo: Ca prends 2 clicks pour sélectionner une image
+    # @todo: Why there are file informations when we change the folder?
     def __ui_imageList_currentChanged_(self, filename):
+        """Called when the user select an image in the image list
+        
+        @param filename: The file name of the selected file
+        @type filename: str
+        """
         print "--- Selected file:", filename
         filename = str(filename)
         
@@ -380,12 +385,16 @@ class ScanWidget(QWidget):
             self.__basewidget_.color.setEnabled(False)
         else:
             file_infos = self.__scanned_files_[filename]
-            # Affichage des informations
+            # Show basic informations
             self.__basewidget_.info_nbPages.setText(str(file_infos["nbpages"]))
-            self.__basewidget_.info_dpi.setText("%dx%d dpi" % (file_infos["dpi"][0], file_infos["dpi"][1]))
-            self.__basewidget_.info_resolution.setText("%dx%d" % (file_infos["resolution"][0], file_infos["resolution"][1]))
+            self.__basewidget_.info_dpi.setText("%dx%d dpi" % \
+                                                (file_infos["dpi"][0],
+                                                 file_infos["dpi"][1]))
+            self.__basewidget_.info_resolution.setText("%dx%d" % \
+                                                       (file_infos["resolution"][0],
+                                                        file_infos["resolution"][1]))
             
-            # Ajout des informations dans les combo box
+            # Create file options
             self.__clearOptions_()
             # @todo: Voir s'il ne serait pas possible d'utiliser addItems
             if (file_infos["nbpages"] == 1):
@@ -405,22 +414,28 @@ class ScanWidget(QWidget):
             else:
                 self.__basewidget_.color.addItem("Black & White")
 
-            if not self.__scanner_.isRunning():
-                self.__basewidget_.delete.setEnabled(True)
-                self.__basewidget_.save.setEnabled(True)
+            # Enable buttons
+            self.__basewidget_.delete.setEnabled(True)
+            self.__basewidget_.save.setEnabled(True)
+            # Enable options
             self.__basewidget_.format.setEnabled(True)
+            self.__basewidget_.resolution.setEnabled(True)
+            self.__basewidget_.color.setEnabled(True)
             self.__ui_format_currentChanged_(self.__basewidget_.format.currentText())
     
     def __ui_format_currentChanged_(self, format):
+        """Called when file format has changed
+        
+        If the file format is pdf, we cannot select a page. If it is not pdf, we
+        need to enable the page selector
+        """
         format = str(format).lower()
         if format == "pdf":
+            self.__basewidget_.page.setCurrentIndex(0)
             self.__basewidget_.page.setEnabled(False)
         else:
             self.__basewidget_.page.setEnabled(True)
-        
-        self.__basewidget_.resolution.setEnabled(True)
-        self.__basewidget_.color.setEnabled(True)
-    
+            
     def __ui_progress_cancelled_(self):
         # @todo: mmm, ce n'est pas super, on doit aussi supprimer les fichiers?
         self.__scanner_.terminate()
