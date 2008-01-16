@@ -45,9 +45,6 @@ class ProgressDialog(QProgressDialog):
         # Top level fixed size dialog
         self.setWindowModality(Qt.WindowModal)
         self.setFixedSize(self.size())
-        # Do not close the dialog after each page
-        self.setAutoClose(False)
-        self.setAutoReset(False)
 
     def newpage(self, current_page, nbr_pages_total):
         if self.isVisible():
@@ -194,8 +191,7 @@ class ScanWidget(QWidget):
         """
         print "<-- Received file:", filename
         # Reset the progress dialog and unlock the widget
-        self.__progress_.reset()
-        self.__progress_.close()
+        self.__progress_.setValue(self.__progress_.maximum())
         self.__unlock_()
     
     def __allPreviewReceived_(self):
@@ -308,6 +304,7 @@ class ScanWidget(QWidget):
         else:
             print "WARNING: No file selected (save), this should not happen"
 
+    # @todo: Lorsqu'on sauvegarde uniquement un seul fichier, le progress est screwed
     def __ui_save_clicked_(self):
         """Called when the user activates the save button
         
@@ -408,9 +405,9 @@ class ScanWidget(QWidget):
             # Add samplesize
             if file_infos["samplesize"] == 24:
                 self.__basewidget_.color.addItem("Color")
-                self.__basewidget_.color.addItem("Black & White")
-            else:
-                self.__basewidget_.color.addItem("Black & White")
+            if file_infos["samplesize"] >= 8:
+                self.__basewidget_.color.addItem("Grayscale")
+            self.__basewidget_.color.addItem("Black & White")
 
             # Enable buttons
             self.__basewidget_.delete.setEnabled(True)
@@ -532,12 +529,17 @@ class ScanWidget(QWidget):
         else:
             return [int(str(self.__basewidget_.page.currentText()))]
     
+    # @todo: Quand on sauvegarde plusieurs images, le samplesize ne fonctionne pas
     def getSamplesize(self):
         samplesize = str(self.__basewidget_.color.currentText())
+        # 24 bits color
         if samplesize == "Color":
             return 24
+        # 8 tones grayscale
+        elif samplesize == "Grayscale":
+            return 8
+        # black and white
         else:
-            # @todo: Regarder si c'est vraiment le noir et blanc (voir 8)
             return 1
 
     def connectToScanner(self, host, port):

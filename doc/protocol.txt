@@ -136,8 +136,8 @@ in multiple lines only for readability
         used when scanning the file returns an error instead of 'ok'.
 
         Valid sample size are :
-            1 (unknown)
-            8 (black and white)
+            1 (black and white)
+            8 (grayscale)
             24 (24 bits color)
         Setting a sample size of 24 on a file scanned only on black and
         white doesn't result in an error.
@@ -211,12 +211,12 @@ in multiple lines only for readability
                      only one page).
     - listfiles : Some of the informations returned are unknown. See
                   the file listfiles_example for more informations.
-    - setsamplesize : What are the different values?
+    - setsamplesize : What are the different values (now, we got 1, 8 and 24)?
     - The Xerox scan utility has already sent the following data to the scanner:
       02 04 05 B4 01 01 04 02
       The answer was :
       02 04 05 B4
-    - ??? : Maybe there is other commands available, but for now, this is
+    - ??? : Maybe there are other commands available, but for now, this is
             the list of known commands :
                 - deletefile
                 - listfiles

@@ -335,13 +335,17 @@ class XeroxC2424:
             self.__setpage_()
             self.__save_file_data_(save_filename, progress_hook)
         else:
-            for page in pages:
-                newpage_hook(page, len(pages))
-                self.__setpage_(page)
-                save_filename_x = "%s%d%s" % \
-                                  (os.path.splitext(save_filename)[0], page, 
-                                   os.path.splitext(save_filename)[1])
-                self.__save_file_data_(save_filename_x, progress_hook)
+            if len(pages) > 1:
+                for page in pages:
+                    newpage_hook(page, len(pages))
+                    self.__setpage_(page)
+                    save_filename_x = "%s%d%s" % \
+                                      (os.path.splitext(save_filename)[0], page, 
+                                       os.path.splitext(save_filename)[1])
+                    self.__save_file_data_(save_filename_x, progress_hook)
+            else:
+                newpage_hook(1, 1)
+                self.__save_file_data_(save_filename, progress_hook)
 
     def getPreview(self, filename):
         """Get the preview of a file

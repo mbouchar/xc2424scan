@@ -22,10 +22,10 @@ Columns:
     6 - vertical dpi used while scanning
     7 - horizonal pixel resolution of the image
     8 - vertical pixel resolution of the image
-    9 - sample size of the image
+    9 - image color sample size
     10 - horizontal pixel resolution of the preview
     11 - vertical pixel resolution of the preview
-    12 - sample size of the preview
+    12 - preview color sample size
 
 Valid values for column:
     1 - YYYY-MM-DD@hh.mm.ss.tif
@@ -36,7 +36,7 @@ Valid values for column:
     6 - 100, 200, 300, 400 or 600
     7 - an integer >= 0 (it depends of the size of the scanned paper)
     8 - an integer >= 0 (it depends of the size of the scanned paper)
-    9 - ??? (known values are 8 (or 1 ?!?) for a b&w image and 24 for a color image)
+    9 - an integer (known values are 1 for b&w, 8 for grayscale and 24 for color)
     10 - an integer >= 0
     11 - an integer >= 0
-    12 - ??? (known values are 8 (or 1 ?!?) for a b&w image and 24 for a color image)
+    12 - an integer (known values are 1 for b&w, 8 for grayscale and 24 for color)
