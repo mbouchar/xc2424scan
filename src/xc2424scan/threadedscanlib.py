@@ -140,6 +140,7 @@ class ThreadedXeroxC2424(QThread):
         for filename in self.__params_:
             self.previews[filename] = self.__scanner_.getPreview(filename)
             self.emit(SIGNAL("previewReceived(const QString&)"), QString(filename))
+        self.emit(SIGNAL("allPreviewReceived()"))
 
     def getPreviews(self, filenames):
         self.__startMethod_(self.__getPreviews_, params = filenames)

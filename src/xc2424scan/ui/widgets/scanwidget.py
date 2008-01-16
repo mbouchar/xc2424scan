@@ -106,8 +106,6 @@ class ScanWidget(QWidget):
                         self.__foldersListReceived_)
         QObject.connect(self.__scanner_, SIGNAL("filesList()"),
                         self.__filesListReceived_)
-        QObject.connect(self.__scanner_, SIGNAL("currentFolder(const QString&)"),
-                        self.__currentFolderReceived_)
         QObject.connect(self.__scanner_, SIGNAL("folderSet(const QString&)"),
                         self.__folderSetReceived_)
         QObject.connect(self.__scanner_, SIGNAL("folderProtected(const QString&)"),
@@ -116,6 +114,8 @@ class ScanWidget(QWidget):
                         self.__fileReceived_)
         QObject.connect(self.__scanner_, SIGNAL("previewReceived(const QString&)"),
                         self.__previewReceived_)
+        QObject.connect(self.__scanner_, SIGNAL("allPreviewReceived()"),
+                        self.__allPreviewReceived_)
         QObject.connect(self.__scanner_, SIGNAL("fileDeleted(const QString&)"),
                         self.__fileDeletedReceived_)
         QObject.connect(self.__scanner_, SIGNAL("connectedToScanner()"),
@@ -139,6 +139,11 @@ class ScanWidget(QWidget):
     # Methods connected to thread signals
     #
     def __scanlibErrorReceived(self, text):
+        """Called when there is an error in the scan library
+        
+        @param text: The text of the error
+        @type text: str
+        """
         if self.__progress_.isVisible():
             self.__progress_.close()
         QMessageBox.critical(self, "Critical error", text)
@@ -153,18 +158,24 @@ class ScanWidget(QWidget):
         self.__basewidget_.imageList.clear()
         self.__scanner_.getFolders()
 
-    # @todo: Not used
-    def __currentFolderReceived_(self, folder):
-        print "<-- Current folder is:", folder
-    
     def __folderSetReceived_(self, folder):
+        """Called when we have changed the current folder
+        
+        @param folder: The folder name
+        @type folder: str
+        """
         print "<-- Folder has been set:", folder
+        # Refresh the contents of the folder
         self.__refreshPreviews_()
     
     def __folderProtectedReceived_(self, folder):
+        """Called when we are trying to access a protected folder
+        
+        @param folder: The folder name
+        @type folder: str
+        """
         print "<-- Protected folder:", folder
         # @todo: si on appuye sur cancel, il faut remettre l'ancien répertoire dans la liste
-        # @todo: on doit désactiver la liste lors de la récupération des previews
         folder = str(folder)
         
         # @todo: there is a ugly thing in down-right corner of dialog
@@ -178,20 +189,34 @@ class ScanWidget(QWidget):
             self.__unlock_()
                 
     def __fileReceived_(self, filename):
+        """Called when a file tranfert has been successfully completed
+        
+        @param filename: The file name
+        @type filename: str
+        """
         print "<-- Received file:", filename
+        # Reset the progress dialog and unlock the widget
         self.__progress_.reset()
         self.__progress_.close()
         self.__unlock_()
     
+    def __allPreviewReceived_(self):
+        """Received when we have received all previews"""
+        print "<-- All preview received"
+        self.__unlock_()
+
     def __previewReceived_(self, filename):
-        print "<-- Preview received:", filename
-        self.__nb_preview_received_ += 1
+        """Received when a preview has been received
         
+        @param filename: The filename of the preview
+        @type filename: str
+        """
+        print "<-- Preview received:", filename
         filename = str(filename)
         preview = self.__scanner_.previews[filename]
         del self.__scanner_.previews[filename]
 
-        # Création du pixmap
+        # Create the pixmap item
         pixmap = QPixmap()
         if preview == None:
             # @todo: Le prefix peut changer
@@ -199,7 +224,7 @@ class ScanWidget(QWidget):
         else:
             pixmap.loadFromData(preview)
             
-        # creation of a black border
+        # Add a black border
         painter = QPainter()
         painter.setPen(Qt.black);
         painter.begin(pixmap)
@@ -208,15 +233,9 @@ class ScanWidget(QWidget):
         painter.drawRect(QRect(0, 0, width, height))
         painter.end()
 
-        # Ajout de l'icône à la liste
+        # Add the new icon to the list
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         items[0].setIcon(QIcon(pixmap))
-
-        if self.__nb_preview_received_ == len(self.__scanned_files_):
-            self.__basewidget_.refresh.setEnabled(True)
-            if self.__basewidget_.imageList.currentItem() != None:
-                self.__basewidget_.delete.setEnabled(True)
-                self.__basewidget_.save.setEnabled(True)
     
     def __fileDeletedReceived_(self, filename):
         print "<-- File deleted:", filename
