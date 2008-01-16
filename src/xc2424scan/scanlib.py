@@ -110,7 +110,7 @@ class XeroxC2424:
         result = self.__get_result_(RECV_BUF_SIZE)
         if self.debug:
             if command != "sendblock":
-                print result
+                print result,
             else:
                 print "received data"
         return result
