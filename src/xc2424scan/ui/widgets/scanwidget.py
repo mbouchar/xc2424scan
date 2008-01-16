@@ -75,16 +75,12 @@ class ScanWidget(QWidget):
         self.__basewidget_ = Ui_ScanWidgetBase()
         self.__basewidget_.setupUi(self)
         
+        # The threaded scanner object
         self.__scanner_ = ThreadedXeroxC2424(debug)
         
         # List of files available on the scanner
         self.__scanned_files_ = None
-        # Last folder visited (see __showFolder_)
-        self.__last_folder_ = None
-        # Number of previews that are shown
-        self.__nb_preview_received_ = 0
         # Last folder visited
-        # @todo: Il y a deux last folder
         self.__old_folder_ = "Public"
         
         # UI: Buttons
@@ -206,6 +202,8 @@ class ScanWidget(QWidget):
         print "<-- All preview received"
         self.__unlock_()
 
+    # @todo: Tester plusieurs previews dans le même répertoire
+    # @todo: Tester plusieurs previews à la racine
     def __previewReceived_(self, filename):
         """Received when a preview has been received
         
@@ -235,55 +233,72 @@ class ScanWidget(QWidget):
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         items[0].setIcon(QIcon(pixmap))
     
+    # @todo: Not tested
     def __fileDeletedReceived_(self, filename):
+        """Called when a file has been deleted
+        
+        @param filename: The name of the deleted file
+        @type filename: str
+        """
         print "<-- File deleted:", filename
+        # Remove the deleted item from the list
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         item = self.__basewidget_.imageList.takeItem(self.__basewidget_.imageList.row(items[0]))
         del item
+        # Unlock the widget
+        self.__unlock_()
     
     def __foldersListReceived_(self):
+        """Called when the folders listing has arrived"""
         print "<-- Received folder listing"
         # Add the folders to the list of folders
         for folder in self.__scanner_.folders:
             self.__basewidget_.folder.addItem(folder)
-        # Refresh the current folder
+        # Refresh the files of the current folder
         self.__refreshPreviews_()
 
     def __filesListReceived_(self):
+        """Called when the files listing of the current folder has arrived"""
         print "<-- Received files listing"
         self.__scanned_files_ = self.__scanner_.files
         
-        # Récupération du preview des images
+        # Add the files to the list and request their previews
         if len(self.__scanned_files_) != 0:
+            # Sort by filename (wich is also by date)
             filenames = self.__scanned_files_.keys()
             filenames.sort()
-            # Affichage des fichiers
+            # Create the Waiting for preview pixmap
             pixmap = QPixmap()
             pixmap.load(config.WAITING_PREVIEW_FILENAME)
             self.__add_black_border_(pixmap, 137, 179)
 
+            # Add the files to the list
             for filename in filenames:
                 self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
 
-            # Récupération des previews
-            self.__nb_preview_received_ = 0
+            # Request the previews
             print "--> Requesting previews"
             self.__scanner_.getPreviews(filenames)
-
-        self.__unlock_()
+        else:
+            self.__unlock_()
     
     #
     # Methods connected to the UI
     #
     def __ui_refresh_clicked_(self):
+        """Called when the user activates the refresh button
+        
+        This method clears the files list and request the current files list
+        again
         """
-        - Désactive l'ensemble du ui
-        - Supprime tous les preview
-        - Affiche tous les previews
-        """
+        # Refresh the folder contents
         self.__refreshPreviews_()
 
     def __ui_delete_clicked_(self):
+        """Called when the user activates the delete button
+        
+        This method delete the current selected file
+        """
         print "--> Deleting file"
         filename = self.currentFilename()
         if filename is not None:
@@ -293,41 +308,58 @@ class ScanWidget(QWidget):
                                           QMessageBox.Yes, QMessageBox.No)
             if result == QMessageBox.Yes:
                 self.__scanner_.deleteFile(filename)
+        else:
+            print "WARNING: No file selected (save), this should not happen"
 
     def __ui_save_clicked_(self):
+        """Called when the user activates the save button
+        
+        This method ask for a filename and download the selected pages
+        """
         print "--> Saving file"
         filename = self.currentFilename()
         
         # Check if a file has been selected
         if filename is not None:
-                save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
-                if save_filename != "":
-                    pages = self.getPages()
-                    format = self.getFormat()
-                    dpi = self.getDpi()
-                    if dpi == None:
-                        dpi = self.__scanned_files_[filename]["dpi"]
-                    samplesize = self.getSamplesize()
-                    
-                    self.__lock_()
-                    self.__scanner_.getFile(filename, save_filename, pages,
-                                            format, dpi, samplesize)
-                    self.__progress_.setLabelText(_("Waiting for transfer to begin"))
-                    self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
-                    print "Range is 0", self.__scanned_files_[filename]["size"]
-                    self.__progress_.setValue(0)
-                    self.__progress_.show()
+            # Ask for filename
+            # @todo: Add default filename, filters, etc.
+            save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
+            if save_filename != "":
+                self.__lock_()
+                # Call the saving thread method
+                pages = self.getPages()
+                format = self.getFormat()
+                dpi = self.getDpi()
+                if dpi == None:
+                    dpi = self.__scanned_files_[filename]["dpi"]
+                samplesize = self.getSamplesize()
+                self.__scanner_.getFile(filename, save_filename, pages,
+                                        format, dpi, samplesize)
+                # Show the progress dialog
+                self.__progress_.setLabelText(_("Waiting for transfer to begin"))
+                self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
+                self.__progress_.setValue(0)
+                self.__progress_.show()
         else:
             print "WARNING: No file selected (save), this should not happen"
 
-    # @todo: If we choose the same folder, do not send the socket commands, just cancel
     # @todo: Why there are file informations when we change the folder?
     def __ui_folder_currentChanged_(self, folder):
-        print "--> Changing folder"
-        self.__lock_()
+        """Called when the current folder has been changed
         
+        If the user has selected another directory, we need to list the contents
+        of this directory
+        """
+        print "--> Changing folder"
         folder = str(folder)
-        self.__scanner_.setFolder(folder)
+        if folder != self.__old_folder_:
+            self.__lock_()
+            # Save old folder
+            self.__old_folder_ = folder
+            # Clear the files list
+            self.__basewidget_.imageList.clear()
+            # Request the new folder        
+            self.__scanner_.setFolder(folder)
 
     def __ui_imageList_currentChanged_(self, filename):
         print "--- Selected file:", filename
