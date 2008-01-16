@@ -220,15 +220,11 @@ class ScanWidget(QWidget):
         pixmap = QPixmap()
         if preview == None:
             pixmap.load(config.NO_PREVIEW_FILENAME)
-            width = 137
-            height = 179
         else:
             pixmap.loadFromData(preview)
-            width = self.__scanned_files_[filename]["respreview"][0] - 1
-            height = self.__scanned_files_[filename]["respreview"][1] - 1
             
         # Add a black border
-        self.__add_black_border_(pixmap, width, height)
+        self.__add_black_border_(pixmap)
 
         # Add the new icon to the list
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
@@ -271,7 +267,7 @@ class ScanWidget(QWidget):
             # Create the Waiting for preview pixmap
             pixmap = QPixmap()
             pixmap.load(config.WAITING_PREVIEW_FILENAME)
-            self.__add_black_border_(pixmap, 137, 179)
+            self.__add_black_border_(pixmap)
 
             # Add the files to the list
             for filename in filenames:
@@ -450,50 +446,18 @@ class ScanWidget(QWidget):
     #
     # Other methods
     #
-    def __add_black_border_(self, pixmap, width = None, height = None):
+    def __add_black_border_(self, pixmap):
+        """Add a black border around a pixmap
+        
+        @param pixmap: The pixmap
+        @type pixmap: QPixmap
+        """
         painter = QPainter()
         painter.setPen(Qt.black);
         painter.begin(pixmap)
-        painter.drawRect(QRect(0, 0, width, height))
+        painter.drawRect(QRect(0, 0, pixmap.width() - 1, pixmap.height() - 1))
         painter.end()
 
-    def __refreshFilesList_(self):
-        print "--> Refreshing file list"
-        # @todo: Il va y avoir pas mal plus de stock à mettre disabled
-        self.__basewidget_.refresh.setEnabled(False)
-        self.__basewidget_.delete.setEnabled(False)
-        self.__basewidget_.imageList.clear()
-
-        # Ajout des fichiers présents dans le répertoire
-        # @todo: Ca ne fonctionnera pas ca:
-        self.__scanned_files_ = self.__scanner_.getFilesList()
-        painter = QPainter()
-        painter.setPen(Qt.black);
-
-        for filename in self.__scanned_files_.keys():
-            # Récupération du preview de l'image
-            pixmap = QPixmap()
-            try:
-                preview = self.__scanner_.getPreview(filename)
-                pixmap.loadFromData(preview)
-                
-                # creation of a black border
-                painter.begin(pixmap)
-                width = self.__scanned_files_[filename]["respreview"][0] - 1
-                height = self.__scanned_files_[filename]["respreview"][1] - 1
-                painter.drawRect(QRect(0, 0, width, height))
-                painter.end()
-            except NoPreviewError:
-                # @todo: Le prefix peut changer
-                pixmap.load("/usr/share/xc2424scan/nopreview.png")
-            
-            self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
-        self.__basewidget_.imageList.sortItems()
-        
-        self.__basewidget_.refresh.setEnabled(True)
-        if self.__basewidget_.imageList.currentItem() != None:
-            self.__basewidget_.delete.setEnabled(True)
-    
     def __refreshPreviews_(self):
         print "--> Refreshing previews"
         self.__lock_()
