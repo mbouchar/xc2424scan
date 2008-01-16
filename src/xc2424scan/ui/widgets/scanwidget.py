@@ -142,7 +142,8 @@ class ScanWidget(QWidget):
         if self.__progress_.isVisible():
             self.__progress_.close()
         QMessageBox.critical(self, "Critical error", text)
-        self.__unlock_()
+        if self.__scanner_.connected:
+            self.__unlock_()
     
     def __connectedToScannerReceived_(self):
         """Called when we are connected to a new scanner"""

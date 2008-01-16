@@ -53,14 +53,15 @@ class FScanConfig(QDialog):
         self.__layout_.setSpacing(0)
         self.__layout_.addWidget(self.config)
         
-        self.connect(self.config.ok, SIGNAL("clicked()"), self.__ok_clicked_)
-        self.connect(self.config.cancel, SIGNAL("clicked()"), self.__cancel_clicked_)
+        self.connect(self.config.ok, SIGNAL("clicked()"), self.__ui_ok_clicked_)
+        self.connect(self.config.cancel, SIGNAL("clicked()"),
+                     self.__ui_cancel_clicked_)
     
-    def __ok_clicked_(self):
+    def __ui_ok_clicked_(self):
         """This is called when the user click on the OK button"""
         self.accept()
         
-    def __cancel_clicked_(self):
+    def __ui_cancel_clicked_(self):
         """This is called when the user click on the Cancel button or close the
         dialog"""
         self.reject()
@@ -95,10 +96,6 @@ class FScan(QMainWindow):
 
         # Create the menu
         self.__setupMenu_()
-
-        # @todo: Create the status bar?
-        #self.__statusbar_ = QStatusBar(self)
-        #self.setStatusBar(self.__statusbar_)
 
     def __setupMenu_(self):
         """Used to create the default menu"""
