@@ -319,10 +319,18 @@ class ScanWidget(QWidget):
         # Check if a file has been selected
         if filename is not None:
             # Ask for filename
-            # @todo: Add default filename, filters, etc.
-            save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file", QDir.homePath()))
+            save_filter = self.__get_format_filter_()
+            default_save_filename = os.path.join(str(QDir.homePath()), 
+                                                 "%s.%s" % (os.path.splitext(filename)[0],
+                                                            self.getFormat()))
+            save_filename = str(QFileDialog.getSaveFileName(self, "Saving scanned file",
+                                                            default_save_filename,
+                                                            save_filter))
             if save_filename != "":
                 self.__lock_()
+                # Add file format if not specified
+                if os.path.splitext(save_filename)[1] == "":
+                    save_filename += ".%s" % self.getFormat()
                 # Call the saving thread method
                 pages = self.getPages()
                 format = self.getFormat()
@@ -332,11 +340,12 @@ class ScanWidget(QWidget):
                 samplesize = self.getSamplesize()
                 self.__scanner_.getFile(filename, save_filename, pages,
                                         format, dpi, samplesize)
-                # Show the progress dialog
-                self.__progress_.setLabelText(_("Waiting for transfer to begin"))
-                self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
-                self.__progress_.setValue(0)
-                self.__progress_.show()
+                # Show the progress dialog (only works for tiff and bmp)
+                if self.getFormat() in ["tiff", "bmp"]:
+                    self.__progress_.setLabelText(_("Waiting for transfer to begin"))
+                    self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
+                    self.__progress_.setValue(0)
+                    self.__progress_.show()
         else:
             print "WARNING: No file selected (save), this should not happen"
 
@@ -444,6 +453,22 @@ class ScanWidget(QWidget):
     #
     # Other methods
     #
+    def __get_format_filter_(self):
+        format = self.getFormat()
+        if format == "tiff":
+            filter = _("TIFF images (*.tif *.tiff)")
+        elif format == "gif":
+            filter = _("GIF images (*.gif)")
+        elif format == "jpeg":
+            filter = _("JPEG images (*.jpg *.jpeg)")
+        elif format == "bmp":
+            filter = _("BMP images (*.bmp)")
+        elif format == "pdf":
+            filter = _("PDF files (*.pdf)")
+        else:
+            filter = ""
+        return filter + ";;All files (*)"
+
     def __add_black_border_(self, pixmap):
         """Add a black border around a pixmap
         
