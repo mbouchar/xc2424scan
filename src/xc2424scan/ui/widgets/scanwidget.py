@@ -50,14 +50,16 @@ class ProgressDialog(QProgressDialog):
         self.setAutoReset(False)
 
     def newpage(self, current_page, nbr_pages_total):
-        if nbr_pages_total == 1:
-            self.setLabelText(_("Getting page %d") % current_page)
-        else:
-            self.setLabelText(_("Getting page %d of %d") % \
-                              (current_page, nbr_pages_total))
+        if self.isVisible():
+            if nbr_pages_total == 1:
+                self.setLabelText(_("Getting page %d") % current_page)
+            else:
+                self.setLabelText(_("Getting page %d of %d") % \
+                                  (current_page, nbr_pages_total))
     
     def progress(self, received_size):
-        self.setValue(self.value() + received_size)
+        if self.isVisible():
+            self.setValue(self.value() + received_size)
 
 class ScanWidget(QWidget):
     """The main scanning widget"""
@@ -126,7 +128,7 @@ class ScanWidget(QWidget):
                         self.__progress_.newpage)
         QObject.connect(self.__scanner_, SIGNAL("progress(int)"),
                         self.__progress_.progress)
-        QObject.connect(self.__progress_, SIGNAL("cancelled()"),
+        QObject.connect(self.__progress_, SIGNAL("canceled()"),
                         self.__ui_progress_cancelled_)
 
         self.__lock_()
@@ -396,18 +398,18 @@ class ScanWidget(QWidget):
             
             # Create file options
             self.__clearOptions_()
-            # @todo: Voir s'il ne serait pas possible d'utiliser addItems
-            if (file_infos["nbpages"] == 1):
-                pages = []
-            else:
-                pages = ["all"]
+            # Add pages
+            pages = []
+            if file_infos["nbpages"] > 1:
+                pages.append("all")
             pages.extend([str(x) for x in range(1, file_infos["nbpages"] + 1)])
-            for page in pages:
-                self.__basewidget_.page.addItem(page)
+            self.__basewidget_.page.addItems(pages)
+            # Add dpi
             dpis = ["max"]
-            dpis.extend(["%dx%d" % (x, x) for x in [100, 200, 300, 400, 600] if x <= file_infos["dpi"][0]])
-            for dpi in dpis:
-                self.__basewidget_.resolution.addItem(dpi)
+            dpis.extend(["%dx%d" % (x, x) for x in [100, 200, 300, 400, 600]
+                         if x <= file_infos["dpi"][0]])
+            self.__basewidget_.resolution.addItems(dpis)
+            # Add samplesize
             if file_infos["samplesize"] == 24:
                 self.__basewidget_.color.addItem("Color")
                 self.__basewidget_.color.addItem("Black & White")
@@ -435,9 +437,12 @@ class ScanWidget(QWidget):
             self.__basewidget_.page.setEnabled(False)
         else:
             self.__basewidget_.page.setEnabled(True)
-            
+    
+    # @todo: The progress dialog is shown again after hiding
     def __ui_progress_cancelled_(self):
-        # @todo: mmm, ce n'est pas super, on doit aussi supprimer les fichiers?
+        """Called when the user click on the progress cancel button"""
+        # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
+        print "--- Cancelled saving"
         self.__scanner_.terminate()
         self.__scanner_.wait()
         self.__unlock_()
