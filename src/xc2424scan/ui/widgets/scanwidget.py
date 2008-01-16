@@ -81,7 +81,7 @@ class ScanWidget(QWidget):
         # List of files available on the scanner
         self.__scanned_files_ = None
         # Last folder visited
-        self.__old_folder_ = ["", "Public"]
+        self.__old_folder_ = "Public"
         
         # UI: Buttons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
@@ -161,7 +161,10 @@ class ScanWidget(QWidget):
         @param folder: The folder name
         @type folder: str
         """
-        print "<-- Folder has been set:", folder
+        print "<-- Folder has been set:", str(folder)
+        # Save old folder
+        self.__old_folder_ = str(folder)
+
         # Refresh the contents of the folder
         self.__refreshPreviews_()
     
@@ -182,8 +185,7 @@ class ScanWidget(QWidget):
         if result is True:
             self.__scanner_.setFolder(folder, str(password))
         else:
-            self.__old_folder_[1] = self.__old_folder_[0]
-            folder_index = self.__basewidget_.folder.findText(self.__old_folder_[1])
+            folder_index = self.__basewidget_.folder.findText(self.__old_folder_)
             self.__basewidget_.folder.setCurrentIndex(folder_index)
             self.__unlock_()
                 
@@ -346,11 +348,8 @@ class ScanWidget(QWidget):
         """
         print "--> Changing folder"
         folder = str(folder)
-        if folder != self.__old_folder_[1]:
+        if folder != self.__old_folder_:
             self.__lock_()
-            # Save old folder
-            self.__old_folder_[0] = self.__old_folder_[1]
-            self.__old_folder_[1] = folder
             # Request the new folder        
             self.__scanner_.setFolder(folder)
 
