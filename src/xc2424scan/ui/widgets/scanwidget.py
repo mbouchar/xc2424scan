@@ -40,7 +40,7 @@ from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 class ProgressDialog(QProgressDialog):
     def __init__(self, parent = None):
         QProgressDialog.__init__(self, parent)
-        self.setWindowTitle(_("Download progress"))
+        self.setWindowTitle(_("Downloading"))
 
         # Top level fixed size dialog
         self.setWindowModality(Qt.WindowModal)
@@ -48,7 +48,9 @@ class ProgressDialog(QProgressDialog):
 
     def newpage(self, current_page, nbr_pages_total):
         if self.isVisible():
-            if nbr_pages_total == 1:
+            if nbr_pages_total == -1:
+                self.setLabelText(_("Getting file"))
+            elif nbr_pages_total == 1:
                 self.setLabelText(_("Getting page %d") % current_page)
             else:
                 self.setLabelText(_("Getting page %d of %d") % \
@@ -226,7 +228,6 @@ class ScanWidget(QWidget):
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         items[0].setIcon(QIcon(pixmap))
     
-    # @todo: Not tested
     def __fileDeletedReceived_(self, filename):
         """Called when a file has been deleted
         
@@ -362,7 +363,7 @@ class ScanWidget(QWidget):
         @param filename: The file name of the selected file
         @type filename: str
         """
-        print "--- Selected file:", filename
+        print "--- Selected file: \"%s\"" % filename
         filename = str(filename)
         
         if filename == "":

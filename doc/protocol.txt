@@ -97,8 +97,10 @@ in multiple lines only for readability
             -1 (for the preview)
             Nothing (for all the pages (pdf only))
             The page number, beginning with 1
+
+        WARNING : tellfilesize only works if the format is tiff or bmp.
             
-        WARNING : Some files doesn't have a preview (scanned a graphic,
+        WARNING : Some files don't have a preview (scanned at graphic,
                   for example). When asking for page -1, the server 
                   returns the error "no such". The client must handle
                   this event.
@@ -206,9 +208,6 @@ in multiple lines only for readability
 
     - setusage : I have absolutely no idea what this command is supposed
                  to do
-    - tellfilesize : Sometimes, the file size is 0. When the file format
-                     is tiff, the file size is correct (even when selecting
-                     only one page).
     - listfiles : Some of the informations returned are unknown. See
                   the file listfiles_example for more informations.
     - setsamplesize : What are the different values (now, we got 1, 8 and 24)?

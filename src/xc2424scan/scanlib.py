@@ -179,7 +179,7 @@ class XeroxC2424:
     def __tellfilesize_(self):
         filesize = self.__send_command_("tellfilesize")
         try:
-            return int(filesize.strip())
+            return int(filesize.strip().split("\t")[1])
         except ValueError:
             raise ValueError("Unable to get a valid file size")
     
@@ -333,6 +333,7 @@ class XeroxC2424:
             # If we are saving a pdf file, we have to get all pages at the same
             # time
             self.__setpage_()
+            newpage_hook(-1, -1)
             self.__save_file_data_(save_filename, progress_hook)
         else:
             if len(pages) > 1:
