@@ -81,7 +81,7 @@ class ScanWidget(QWidget):
         # List of files available on the scanner
         self.__scanned_files_ = None
         # Last folder visited
-        self.__old_folder_ = "Public"
+        self.__old_folder_ = ["", "Public"]
         
         # UI: Buttons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
@@ -172,7 +172,6 @@ class ScanWidget(QWidget):
         @type folder: str
         """
         print "<-- Protected folder:", folder
-        # @todo: si on appuye sur cancel, il faut remettre l'ancien répertoire dans la liste
         folder = str(folder)
         
         # @todo: there is a ugly thing in down-right corner of dialog
@@ -183,6 +182,9 @@ class ScanWidget(QWidget):
         if result is True:
             self.__scanner_.setFolder(folder, str(password))
         else:
+            self.__old_folder_[1] = self.__old_folder_[0]
+            folder_index = self.__basewidget_.folder.findText(self.__old_folder_[1])
+            self.__basewidget_.folder.setCurrentIndex(folder_index)
             self.__unlock_()
                 
     def __fileReceived_(self, filename):
@@ -344,12 +346,11 @@ class ScanWidget(QWidget):
         """
         print "--> Changing folder"
         folder = str(folder)
-        if folder != self.__old_folder_:
+        if folder != self.__old_folder_[1]:
             self.__lock_()
             # Save old folder
-            self.__old_folder_ = folder
-            # Clear the files list
-            self.__basewidget_.imageList.clear()
+            self.__old_folder_[0] = self.__old_folder_[1]
+            self.__old_folder_[1] = folder
             # Request the new folder        
             self.__scanner_.setFolder(folder)
 
@@ -430,9 +431,9 @@ class ScanWidget(QWidget):
         else:
             self.__basewidget_.page.setEnabled(True)
     
+    # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
     def __ui_progress_cancelled_(self):
         """Called when the user click on the progress cancel button"""
-        # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
         print "--- Cancelled saving"
         self.__scanner_.terminate()
         self.__scanner_.wait()
@@ -458,9 +459,9 @@ class ScanWidget(QWidget):
 
     def __refreshPreviews_(self):
         print "--> Refreshing previews"
+        self.__basewidget_.imageList.clear()
         self.__lock_()
 
-        self.__basewidget_.imageList.clear()
         self.__scanner_.getFilesList()
 
     def __clearOptions_(self):
