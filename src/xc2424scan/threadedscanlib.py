@@ -18,14 +18,16 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 """
-@todo: Some documentation
+This is the Qt and threaded version of the scanlib library. Please note that you
+can only call one threaded method at a time because of Qt limitations, socket
+communications and design.
 """
 
 __all__ = ["ThreadedXeroxC2424"]
 
 from PyQt4.QtCore import QString, QThread, SIGNAL
 
-from xc2424scan.scanlib import XeroxC2424, ProtectedError
+from xc2424scan.scanlib import *
 
 # @todo: Envoyer les résultats dans les signaux (ceux qui ne sont pas encore faits)
 class ThreadedXeroxC2424(QThread):
@@ -54,7 +56,7 @@ class ThreadedXeroxC2424(QThread):
         self.start()
 
     #
-    # Gets the folder list
+    # Get the folder list
     #
     def __getFolders_(self):
         self.folders = self.__scanner_.getFolders()
@@ -64,7 +66,7 @@ class ThreadedXeroxC2424(QThread):
         self.__startMethod_(self.__getFolders_)
         
     #
-    # Gets the files list
+    # Get the files list
     #
     def __getFilesList_(self):
         self.files = self.__scanner_.getFilesList()
@@ -84,7 +86,7 @@ class ThreadedXeroxC2424(QThread):
         self.__startMethod_(self.__getCurrentFolder_)
     
     #
-    # Sets the current folder
+    # Set the current folder
     #
     def __setFolder_(self):
         folder, password = self.__params_
@@ -98,7 +100,7 @@ class ThreadedXeroxC2424(QThread):
         self.__startMethod_(self.__setFolder_, params = [folder, password])
     
     #
-    # Gets a file from the scanner
+    # Get a file from the scanner
     #
     def __newPageHook_(self, current_page, nbr_pages_total):
         self.emit(SIGNAL("newPage(int, int)"),
@@ -131,7 +133,7 @@ class ThreadedXeroxC2424(QThread):
                              "samplesize": samplesize})
     
     #
-    # Gets the preview of a file
+    # Get the preview of a file
     #
     def __getPreviews_(self):
         # Possible de faire un cache ici
@@ -163,6 +165,10 @@ class ThreadedXeroxC2424(QThread):
     def connectToScanner(self, host, port):
         self.__startMethod_(self.__connectToScanner_, params = [host, port])
 
+    @property
+    def connected(self):
+        return self.__scanner_.connected
+
     def run(self):
         try:
             self.__method_()
@@ -171,7 +177,3 @@ class ThreadedXeroxC2424(QThread):
 
         self.__method_ = None
         self.__params_ = None
-
-    @property
-    def connected(self):
-        return self.__scanner_.connected
