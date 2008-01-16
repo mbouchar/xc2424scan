@@ -198,11 +198,9 @@ class ScanWidget(QWidget):
     
     def __allPreviewReceived_(self):
         """Received when we have received all previews"""
-        print "<-- All preview received"
+        print "<-- All previews received"
         self.__unlock_()
 
-    # @todo: Tester plusieurs previews dans le même répertoire
-    # @todo: Tester plusieurs previews à la racine
     def __previewReceived_(self, filename):
         """Received when a preview has been received
         
@@ -432,7 +430,6 @@ class ScanWidget(QWidget):
         else:
             self.__basewidget_.page.setEnabled(True)
     
-    # @todo: The progress dialog is shown again after hiding
     def __ui_progress_cancelled_(self):
         """Called when the user click on the progress cancel button"""
         # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
@@ -440,6 +437,9 @@ class ScanWidget(QWidget):
         self.__scanner_.terminate()
         self.__scanner_.wait()
         self.__unlock_()
+        print "WARNING: Protocol screwed, exiting"
+        import sys
+        sys.exit(0)
     
     #
     # Other methods
