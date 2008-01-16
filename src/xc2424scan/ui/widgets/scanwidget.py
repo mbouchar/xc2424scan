@@ -149,11 +149,9 @@ class ScanWidget(QWidget):
         """Called when we are connected to a new scanner"""
         # Show the public directory
         print "<-- Connected to scanner"
+        # Clear the list of files and request the available folders
         self.__basewidget_.imageList.clear()
-        # @todo: Est-ce que la fenêtre est gelée pendant ce temps? OUI
         self.__scanner_.getFolders()
-        self.__scanner_.wait()
-        self.__refreshPreviews_()
 
     # @todo: Not used
     def __currentFolderReceived_(self, folder):
@@ -228,10 +226,11 @@ class ScanWidget(QWidget):
     
     def __foldersListReceived_(self):
         print "<-- Received folder listing"
+        # Add the folders to the list of folders
         for folder in self.__scanner_.folders:
             self.__basewidget_.folder.addItem(folder)
-            
-        self.setEnabled(True)
+        # Refresh the current folder
+        self.__refreshPreviews_()
 
     def __filesListReceived_(self):
         print "<-- Received files listing"
