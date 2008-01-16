@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    This file is part of the xc2424scan package
-#    Copyright (C) 2005 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
+#    Copyright (C) 2005-2007 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -25,9 +25,6 @@ used to retrieve the scanned images from the printer.
 The library offers only some high-level functions. To have more informations
 about the protocol used by the Xerox Scan Utility, please read the file
 protocol.txt
-
-@author: Mathieu Bouchard
-@version: 0.1
 """
 
 __all__ = ["XeroxC2424", "ProtectedError", "SocketError", "NoPreviewError"]
@@ -66,12 +63,14 @@ class XeroxC2424:
             self.disconnect()
 
     def connect(self, address, port):
-        # @todo: Erreurs de connections (adresse invalide, etc.)
         if self.connected:
             self.disconnect()
-            
-        self.__socket_ = socket.socket()
-        self.__socket_.connect((address, port))
+        
+        try:
+            self.__socket_ = socket.socket()
+            self.__socket_.connect((address, port))
+        except socket.error:
+            raise SocketError("Connection refused")
         self.connected = True
 
     def disconnect(self):
@@ -129,7 +128,6 @@ class XeroxC2424:
         try:
             result = self.__socket_.recv(buffer_size)
         except socket.timeout:
-            # @todo: Do something about this
             raise SocketError("Socket timed out")
         return result
         

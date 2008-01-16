@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    This file is part of the xc2424scan package
-#    Copyright (C) 2005 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
+#    Copyright (C) 2005-2007 Mathieu Bouchard <mbouchar@bioinfo.ulaval.ca>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -171,3 +171,7 @@ class ThreadedXeroxC2424(QThread):
 
         self.__method_ = None
         self.__params_ = None
+
+    @property
+    def connected(self):
+        return self.__scanner_.connected
