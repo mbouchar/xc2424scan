@@ -102,9 +102,9 @@ class ThreadedXeroxC2424(QThread):
     #
     # Get a file from the scanner
     #
-    def __newPageHook_(self, current_page, nbr_pages_total):
+    def __newPageHook_(self, current_page, file_size):
         self.emit(SIGNAL("newPage(int, int)"),
-                  current_page, nbr_pages_total)
+                  current_page, file_size)
     
     def __progressHook_(self, received_size):
         self.emit(SIGNAL("progress(int)"), received_size)

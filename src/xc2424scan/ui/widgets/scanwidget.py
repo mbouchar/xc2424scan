@@ -37,6 +37,7 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
+# @todo: Il est possible de savoir le nombre de pages des pdfs aussi avec un peu de travail
 class ProgressDialog(QProgressDialog):
     def __init__(self, parent = None):
         QProgressDialog.__init__(self, parent)
@@ -45,16 +46,28 @@ class ProgressDialog(QProgressDialog):
         # Top level fixed size dialog
         self.setWindowModality(Qt.WindowModal)
         self.setFixedSize(self.size())
+        # Do not close at 100%
+        self.setAutoClose(False)
+        self.setAutoReset(False)
+        
+        self.__nbr_pages_ = -1
+    
+    def setNbrPages(self, nbr_pages):
+        self.__nbr_pages_ = nbr_pages
 
-    def newpage(self, current_page, nbr_pages_total):
+    def newpage(self, current_page, file_size):
         if self.isVisible():
-            if nbr_pages_total == -1:
+            # Set progress range
+            self.setValue(0)
+            self.setRange(0, file_size)
+            # Set label text
+            if self.__nbr_pages_ == -1:
                 self.setLabelText(_("Getting file"))
-            elif nbr_pages_total == 1:
+            elif self.__nbr_pages_ == 1:
                 self.setLabelText(_("Getting page %d") % current_page)
             else:
                 self.setLabelText(_("Getting page %d of %d") % \
-                                  (current_page, nbr_pages_total))
+                                  (current_page, self.__nbr_pages_))
     
     def progress(self, received_size):
         if self.isVisible():
@@ -200,7 +213,7 @@ class ScanWidget(QWidget):
         """
         print "<-- Received file:", filename
         # Reset the progress dialog and unlock the widget
-        self.__progress_.setValue(self.__progress_.maximum())
+        self.__progress_.hide()
         self.__unlock_()
     
     def __allPreviewReceived_(self):
@@ -311,7 +324,6 @@ class ScanWidget(QWidget):
         else:
             print "WARNING: No file selected (save), this should not happen"
 
-    # @todo: Lorsqu'on sauvegarde uniquement un seul fichier, le progress est screwed
     def __ui_save_clicked_(self):
         """Called when the user activates the save button
         
@@ -347,9 +359,12 @@ class ScanWidget(QWidget):
                 # Show the progress dialog (only works for tiff and bmp)
                 if self.getFormat() in ["tiff", "bmp"]:
                     self.__progress_.setLabelText(_("Waiting for transfer to begin"))
-                    self.__progress_.setRange(0, self.__scanned_files_[filename]["size"])
+                    self.__progress_.setNbrPages(len(pages))
                     self.__progress_.setValue(0)
                     self.__progress_.show()
+                else:
+                    # @todo: Do something for other formats
+                    pass
         else:
             print "WARNING: No file selected (save), this should not happen"
 
@@ -557,7 +572,7 @@ class ScanWidget(QWidget):
         else:
             return [int(str(self.__basewidget_.page.currentText()))]
     
-    # @todo: Quand on sauvegarde plusieurs images, le samplesize ne fonctionne pas
+    # @todo: When saving more than one page, the sample size is not working
     def getSamplesize(self):
         samplesize = str(self.__basewidget_.color.currentText())
         # 24 bits color
