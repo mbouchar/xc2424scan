@@ -54,5 +54,6 @@ if __name__ == "__main__":
                               "xc2424scan/ui": "src/xc2424scan/ui",
                               "xc2424scan/ui/widgets": "src/xc2424scan/ui/widgets"},
           scripts          = ["exec/xc2424scan"],
-          data_files       = [("share/xc2424scan", ["data/nopreview.png"])],
+          data_files       = [("share/xc2424scan", ["data/nopreview.png",
+                                                    "data/waitingpreview.png"])],
          )
