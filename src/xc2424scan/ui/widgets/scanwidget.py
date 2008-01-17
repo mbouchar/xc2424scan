@@ -253,7 +253,8 @@ class ScanWidget(QWidget):
     def __connectedToScannerReceived_(self):
         """Called when we are connected to a new scanner"""
         # Show the public directory
-        print "<-- Connected to scanner"
+        if config.DEBUG_GUI:
+            print "<-- Connected to scanner"
         # Clear the list of files and request the available folders
         self.__basewidget_.imageList.clear()
         self.__scanner_.getFolders()
@@ -264,7 +265,8 @@ class ScanWidget(QWidget):
         @param folder: The folder name
         @type folder: str
         """
-        print "<-- Folder has been set:", str(folder)
+        if config.DEBUG_GUI:
+            print "<-- Folder has been set:", str(folder)
         # Save old folder
         self.__old_folder_ = str(folder)
 
@@ -277,7 +279,8 @@ class ScanWidget(QWidget):
         @param folder: The folder name
         @type folder: str
         """
-        print "<-- Protected folder:", folder
+        if config.DEBUG_GUI:
+            print "<-- Protected folder:", folder
         folder = str(folder)
         
         password, result = QInputDialog.getText(self, "Accessing a protected folder",
@@ -297,14 +300,16 @@ class ScanWidget(QWidget):
         @param filename: The file name
         @type filename: str
         """
-        print "<-- Received file:", filename
+        if config.DEBUG_GUI:
+            print "<-- Received file:", filename
         # Reset the progress dialog and unlock the widget
         self.__progress_.hide()
         self.__unlock_()
     
     def __allPreviewReceived_(self):
         """Received when we have received all previews"""
-        print "<-- All previews received"
+        if config.DEBUG_GUI:
+            print "<-- All previews received"
         self.__unlock_()
         self.__basewidget_.imageList.setCurrentItem(self.__basewidget_.imageList.item(0))
 
@@ -314,7 +319,8 @@ class ScanWidget(QWidget):
         @param filename: The filename of the preview
         @type filename: str
         """
-        print "<-- Preview received:", filename
+        if config.DEBUG_GUI:
+            print "<-- Preview received:", filename
         filename = str(filename)
         preview = self.__scanner_.previews[filename]
         del self.__scanner_.previews[filename]
@@ -339,7 +345,8 @@ class ScanWidget(QWidget):
         @param filename: The name of the deleted file
         @type filename: str
         """
-        print "<-- File deleted:", filename
+        if config.DEBUG_GUI:
+            print "<-- File deleted:", filename
         # Remove the deleted item from the list
         items = self.__basewidget_.imageList.findItems(filename, Qt.MatchExactly)
         item = self.__basewidget_.imageList.takeItem(self.__basewidget_.imageList.row(items[0]))
@@ -349,7 +356,8 @@ class ScanWidget(QWidget):
     
     def __foldersListReceived_(self):
         """Called when the folders listing has arrived"""
-        print "<-- Received folder listing"
+        if config.DEBUG_GUI:
+            print "<-- Received folder listing"
         # Add the folders to the list of folders
         for folder in self.__scanner_.folders:
             self.__basewidget_.folder.addItem(folder)
@@ -358,7 +366,8 @@ class ScanWidget(QWidget):
 
     def __filesListReceived_(self):
         """Called when the files listing of the current folder has arrived"""
-        print "<-- Received files listing"
+        if config.DEBUG_GUI:
+            print "<-- Received files listing"
         self.__scanned_files_ = self.__scanner_.files
         
         # Add the files to the list and request their previews
@@ -376,7 +385,8 @@ class ScanWidget(QWidget):
                 self.__basewidget_.imageList.addItem(QListWidgetItem(QIcon(pixmap), filename))
 
             # Request the previews
-            print "--> Requesting previews"
+            if config.DEBUG_GUI:
+                print "--> Requesting previews"
             self.__scanner_.getPreviews(filenames)
         else:
             self.__unlock_()
@@ -398,7 +408,8 @@ class ScanWidget(QWidget):
         
         This method delete the current selected file
         """
-        print "--> Deleting file"
+        if config.DEBUG_GUI:
+            print "--> Deleting file"
         filename = self.currentFilename()
         if filename is not None:
             result = QMessageBox.question(self, "Confirmation of file deletion",
@@ -415,7 +426,8 @@ class ScanWidget(QWidget):
         
         This method ask for a filename and download the selected pages
         """
-        print "--> Saving file"
+        if config.DEBUG_GUI:
+            print "--> Saving file"
         filename = self.currentFilename()
         
         # Check if a file has been selected
@@ -453,7 +465,8 @@ class ScanWidget(QWidget):
         If the user has selected another directory, we need to list the contents
         of this directory
         """
-        print "--> Changing folder"
+        if config.DEBUG_GUI:
+            print "--> Changing folder"
         folder = str(folder)
         if folder != self.__old_folder_:
             self.__lock_()
@@ -467,7 +480,8 @@ class ScanWidget(QWidget):
         @type filename: str
         """
         filename = str(filename)
-        print "--- Selected file: \"%s\"" % filename
+        if config.DEBUG_GUI:
+            print "--- Selected file: \"%s\"" % filename
         
         if filename == "":
             self.__basewidget_.info_nbPages.setText("")
@@ -538,7 +552,8 @@ class ScanWidget(QWidget):
     # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
     def __ui_progress_cancelled_(self):
         """Called when the user click on the progress cancel button"""
-        print "--- Cancelled saving"
+        if config.DEBUG_GUI:
+            print "--- Cancelled saving"
         self.__scanner_.terminate()
         self.__scanner_.wait()
         self.__unlock_()
@@ -578,7 +593,8 @@ class ScanWidget(QWidget):
         painter.end()
 
     def __refreshPreviews_(self):
-        print "--> Refreshing previews"
+        if config.DEBUG_GUI:
+            print "--> Refreshing previews"
         self.__basewidget_.imageList.clear()
         self.__lock_()
 
@@ -667,9 +683,11 @@ class ScanWidget(QWidget):
             return 1
 
     def connectToScanner(self, host, port):
-        print "--> Connecting to scanner"
+        if config.DEBUG_GUI:
+            print "--> Connecting to scanner"
         self.__scanner_.connectToScanner(host, port)
     
     def disconnect(self):
-        print "--> Disconnecting from scanner"
+        if config.DEBUG_GUI:
+            print "--> Disconnecting from scanner"
         self.__scanner_.disconnect()

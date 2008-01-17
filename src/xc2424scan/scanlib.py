@@ -99,10 +99,10 @@ class XeroxC2424:
                 send_command = self.__add_param_(send_command, params)
 
         self.__socket_.send("%s\n" % send_command)
-        if config.DEBUG:
+        if config.DEBUG_LIB:
             print "S:", send_command
         result = self.__get_result_(RECV_BUF_SIZE)
-        if config.DEBUG:
+        if config.DEBUG_LIB:
             if command != "sendblock":
                 print result,
             else:

@@ -30,12 +30,14 @@ from ConfigParser import ConfigParser, NoSectionError, NoOptionError, \
                          DuplicateSectionError
 import sys, os
 
-DEBUG = False
+DEBUG_GUI = False
+DEBUG_LIB = False
+
 # @todo: Utiliser ConfigParser
-if "--verbose" in sys.argv:
-    DEBUG = True
-else:
-    DEBUG = False
+if "--debug-lib" in sys.argv or "--debug" in sys.argv:
+    DEBUG_LIB = True
+if "--debug-gui" in sys.argv or "--debug" in sys.argv:
+    DEBUG_GUI = True
 
 FILES_PREFIX = "/usr/share/xc2424scan/images/"
 NO_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "nopreview.png")
