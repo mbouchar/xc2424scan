@@ -30,7 +30,7 @@ from PyQt4.QtGui import QWidget, QFileDialog, QListWidgetItem, QPixmap, \
                         QIcon, QMessageBox, QInputDialog, QLineEdit, QPainter, \
                         QProgressDialog, QMessageBox, QSizePolicy, QDialog, \
                         QLabel, QVBoxLayout, QHBoxLayout, QSpacerItem, \
-                        QSizePolicy
+                        QSizePolicy, QPushButton
 import os
 
 from xc2424scan import config
@@ -71,7 +71,6 @@ class ProgressFullDialog(QProgressDialog):
         if self.isVisible():
             self.setValue(self.value() + received_size)
 
-# @todo: Cancel button for this one too
 class ProgressDialog(QDialog):
     def __init__(self, parent = None):
         QDialog.__init__(self, parent)
@@ -82,23 +81,42 @@ class ProgressDialog(QDialog):
 
         self.__page_ = QLabel(self)
         self.__progress_ = QLabel(self)
+        self.__cancel_ = QPushButton(self)
         self.__downloaded_ = 0
         self.__nbr_pages_ = 0
 
         vboxlayout = QVBoxLayout(self)
 
+        # Page status
         labellayout = QHBoxLayout()
         labellayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         labellayout.addWidget(self.__page_)
         labellayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         vboxlayout.addLayout(labellayout)
 
+        # Progress status
         progresslayout = QHBoxLayout()
         progresslayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         progresslayout.addWidget(self.__progress_)
         progresslayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         vboxlayout.addLayout(progresslayout)
 
+        # Cancel button
+        cancellayout = QHBoxLayout()
+        cancellayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        cancellayout.addWidget(self.__cancel_)
+        vboxlayout.addLayout(cancellayout)
+
+        self.__cancel_.setDefault(True)
+        self.__cancel_.setText("Cancel")
+        QObject.connect(self.__cancel_, SIGNAL("clicked()"),
+                        self.__ui_progress_canceled_)
+        QObject.connect(self, SIGNAL("rejected()"),
+                        self.__ui_progress_canceled_)
+    
+    def __ui_progress_canceled_(self):
+        self.emit(SIGNAL("canceled()"))
+        
     def setLabelText(self, text):
         self.__page_.setText(text)
 
@@ -144,6 +162,8 @@ class ProgressWrapper(QObject):
 
         QObject.connect(self.__progress_full_, SIGNAL("canceled()"),
                         self.__ui_progress_canceled_)
+        QObject.connect(self.__progress_, SIGNAL("canceled()"),
+                        self.__ui_progress_canceled_)
 
     def show(self, format, nbr_pages):
         if format in ["tiff", "bmp"]:
@@ -169,6 +189,7 @@ class ProgressWrapper(QObject):
         self.__current_.hide()
 
 # @todo: Keyboard shortcuts (Seulement CTRL+Q)
+# @todo: Tester Form.resize(QtCore.QSize(QtCore.QRect(0,0,400,91).size()).expandedTo(Form.minimumSizeHint()))
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
