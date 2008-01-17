@@ -184,6 +184,9 @@ class ProgressWrapper(QObject):
     
     def progress(self, received_size):
         self.__current_.progress(received_size)
+    
+    def isVisible(self):
+        return self.__current_.isVisible()
 
     def hide(self):
         self.__current_.hide()
@@ -273,7 +276,7 @@ class ScanWidget(QWidget):
         @type text: str
         """
         if self.__progress_.isVisible():
-            self.__progress_.close()
+            self.__progress_.hide()
         QMessageBox.critical(self, "Critical error", text)
         if self.__scanner_.connected:
             self.__unlock_()
@@ -481,7 +484,7 @@ class ScanWidget(QWidget):
                     dpi = self.__scanned_files_[filename]["dpi"]
                 samplesize = self.getSamplesize()
                 self.__scanner_.getFile(filename, save_filename, pages,
-                                        format, dpi, samplesize)
+                                        format, [dpi, dpi], samplesize)
                 # Show the progress dialog
                 self.__progress_.show(format, len(pages))
         else:

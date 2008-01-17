@@ -202,7 +202,7 @@ class XeroxC2424:
 
     def __setresolution_(self, resolution):
         if self.__send_command_bool_("setresolution", resolution) is not True:
-            raise ValueError("%dx%d is not a valid resolution", 
+            raise ValueError("%dx%d is not a valid resolution" % 
                              (resolution, resolution))
 
     def __setsamplesize_(self, samplesize):
