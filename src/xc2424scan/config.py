@@ -39,7 +39,7 @@ if "--debug-lib" in sys.argv or "--debug" in sys.argv:
 if "--debug-gui" in sys.argv or "--debug" in sys.argv:
     DEBUG_GUI = True
 
-FILES_PREFIX = "/usr/share/xc2424scan/images/"
+FILES_PREFIX = "/usr/share/xc2424scan/"
 NO_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "nopreview.png")
 WAITING_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "waitingpreview.png")
 
