@@ -311,36 +311,40 @@ class XeroxC2424:
 
         @raise ValueError: If a parameter is invalid
         """
-        # Set the filename
-        self.__setfile_(filename)
-        # Unknown
-        self.__setusage_([1, 2])
-        # Set the file format
-        self.__setformat_(format)
-        # Set the resolution
-        self.__setresolution_(dpi)
-        # Set the sample size
-        self.__setsamplesize_(samplesize)
-
-        # Save the requested pages
-        if format == self.FORMAT_PDF:
-            # If we are saving a pdf file, we have to get all pages at the same
-            # time
-            self.__setpage_()
-            newpage_hook(-1, -1)
-            self.__save_file_data_(save_filename, progress_hook)
-        else:
-            if len(pages) > 1:
-                for page in pages:
-                    newpage_hook(page, self.__tellfilesize_())
-                    self.__setpage_(page)
-                    save_filename_x = "%s%d%s" % \
-                                      (os.path.splitext(save_filename)[0], page, 
-                                       os.path.splitext(save_filename)[1])
-                    self.__save_file_data_(save_filename_x, progress_hook)
+        for page in pages:
+            # Set the filename
+            self.__setfile_(filename)
+            # Unknown
+            self.__setusage_([1, 2])
+            # Set the file format
+            self.__setformat_(format)
+            # Set the page
+            if format == self.FORMAT_PDF:
+                # If we are saving a pdf file, we have to get all pages at the
+                # same time
+                self.__setpage_()
             else:
-                newpage_hook(1, self.__tellfilesize_())
-                self.__save_file_data_(save_filename, progress_hook)
+                self.__setpage_(page)
+
+            # Set the resolution
+            self.__setresolution_(dpi)
+            # Set the sample size
+            self.__setsamplesize_(samplesize)
+
+            # Send new page signal
+            if format in ["tiff", "bmp"]:    
+                newpage_hook(page, self.__tellfilesize_())
+
+            # If we have multiple pages, we append the page number at the end
+            if len(pages) > 1:
+                save_filename_x = "%s-p%d%s" % \
+                                  (os.path.splitext(save_filename)[0], page, 
+                                   os.path.splitext(save_filename)[1])
+            else:
+                save_filename_x = save_filename
+
+            # Save the requested pages
+            self.__save_file_data_(save_filename_x, progress_hook)
 
     def getPreview(self, filename):
         """Get the preview of a file

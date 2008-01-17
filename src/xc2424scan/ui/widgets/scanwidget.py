@@ -570,7 +570,6 @@ class ScanWidget(QWidget):
         else:
             return [int(str(self.__basewidget_.page.currentText()))]
     
-    # @todo: When saving more than one page, the sample size is not working
     def getSamplesize(self):
         samplesize = str(self.__basewidget_.color.currentText())
         # 24 bits color
