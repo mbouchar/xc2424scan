@@ -346,8 +346,11 @@ class ScanWidget(QWidget):
                 if os.path.splitext(save_filename)[1] == "":
                     save_filename += ".%s" % self.getFormat()
                 # Call the saving thread method
-                pages = self.getPages()
                 format = self.getFormat()
+                if format != "pdf":
+                    pages = self.getPages()
+                else:
+                    pages = None
                 dpi = self.getDpi()
                 if dpi == None:
                     dpi = self.__scanned_files_[filename]["dpi"]

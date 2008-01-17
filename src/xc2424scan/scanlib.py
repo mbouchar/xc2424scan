@@ -311,6 +311,9 @@ class XeroxC2424:
 
         @raise ValueError: If a parameter is invalid
         """
+        if format == "pdf":
+            pages = [-1]
+
         for page in pages:
             # Set the filename
             self.__setfile_(filename)
@@ -332,8 +335,8 @@ class XeroxC2424:
             self.__setsamplesize_(samplesize)
 
             # Send new page signal
-            if format in ["tiff", "bmp"]:    
-                newpage_hook(page, self.__tellfilesize_())
+            #if format in ["tiff", "bmp"]:    
+            newpage_hook(page, self.__tellfilesize_())
 
             # If we have multiple pages, we append the page number at the end
             if len(pages) > 1:
