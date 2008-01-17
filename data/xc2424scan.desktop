@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+
+Name=xc2424scan
+Comment=Xerox C2424 scanning application
+Name[fr]=xc2424scan
+Comment[fr]=Application pour récupérer les scan des Xerox C2424
+
+Exec=xc2424scan %f
+Terminal=false
+StartupNotify=true
+Icon=scanner
+Categories=KDE;Qt;Utility;
