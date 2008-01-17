@@ -66,7 +66,6 @@ class FScanConfig(QDialog):
         dialog"""
         self.reject()
 
-# @todo: Tester Form.resize(QtCore.QSize(QtCore.QRect(0,0,400,91).size()).expandedTo(Form.minimumSizeHint()))
 class FScan(QMainWindow):
     """This is the main windown of the xc2424scan software"""
     
