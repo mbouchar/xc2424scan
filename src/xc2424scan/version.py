@@ -18,6 +18,8 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 # @todo: Refaire l'image waiting for preview (enlever le the)
+# @todo: Ajouter le fichier .desktop
+# @todo: Lintian clean package
 
 """Module contenant les informations sur le logiciel xc2424scan"""
 
@@ -25,8 +27,8 @@ __program__     = "xc2424scan"
 __authors__     = [{"name":"Mathieu Bouchard", "email":"mbouchar@bioinfo.ulaval.ca"}]
 __maintainer__  = {"name":"Mathieu Bouchard", "email":"mbouchar@bioinfo.ulaval.ca"}
 __url__         = ""
-__version__     = "2.0"
-__copyright__   = "Copyright (c) 2006 by Mathieu Bouchard"
+__version__     = "2.0.1"
+__copyright__   = "Copyright (c) 2005-2007 Mathieu Bouchard"
 __bugs__        = "mbouchar@bioinfo.ulaval.ca"
 __platforms__   = "all"
 __license__     = "GPL"
