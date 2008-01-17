@@ -65,7 +65,8 @@ class FScanConfig(QDialog):
         """This is called when the user click on the Cancel button or close the
         dialog"""
         self.reject()
-        
+
+# @todo: Tester Form.resize(QtCore.QSize(QtCore.QRect(0,0,400,91).size()).expandedTo(Form.minimumSizeHint()))
 class FScan(QMainWindow):
     """This is the main windown of the xc2424scan software"""
     
@@ -105,17 +106,18 @@ class FScan(QMainWindow):
         
         # File
         self.menuFile = QMenu(self.__menu_)
-        self.actionQuit   = QAction(self)
         self.menuFile.setTitle(_("&File"))
-        self.menuFile.addAction(self.actionQuit)
+        self.actionQuit = QAction(self)
         self.actionQuit.setText(_("&Quit"))
+        self.actionQuit.setShortcut(_("Ctrl+Q"))
+        self.menuFile.addAction(self.actionQuit)
 
         # Settings
-        self.menuSettings    = QMenu(self.__menu_)
-        self.actionConfigure = QAction(self)
-        self.menuSettings.addAction(self.actionConfigure)
+        self.menuSettings = QMenu(self.__menu_)
         self.menuSettings.setTitle(_("&Settings"))
+        self.actionConfigure = QAction(self)
         self.actionConfigure.setText(_("&Configure xc2424scan"))
+        self.menuSettings.addAction(self.actionConfigure)
 
         # Add the menus to the menu
         self.__menu_.addAction(self.menuFile.menuAction())

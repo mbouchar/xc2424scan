@@ -188,8 +188,6 @@ class ProgressWrapper(QObject):
     def hide(self):
         self.__current_.hide()
 
-# @todo: Keyboard shortcuts (Seulement CTRL+Q)
-# @todo: Tester Form.resize(QtCore.QSize(QtCore.QRect(0,0,400,91).size()).expandedTo(Form.minimumSizeHint()))
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
