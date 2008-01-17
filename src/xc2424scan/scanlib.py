@@ -30,6 +30,7 @@ protocol.txt
 __all__ = ["XeroxC2424", "ProtectedError", "SocketError", "NoPreviewError"]
 
 import os, socket
+from xc2424scan import config
 
 RECV_BUF_SIZE = 1500
 FILE_BUF_SIZE = 10240
@@ -51,10 +52,9 @@ class XeroxC2424:
     FORMAT_PDF  = "pdf"
     FORMAT_JPEG = "jpeg"
 
-    def __init__(self, debug = False):
+    def __init__(self):
         self.__socket_ = None
         self.connected = False
-        self.__debug_ = debug
 
     def __del__(self):
         if self.connected is True:
@@ -76,12 +76,6 @@ class XeroxC2424:
         self.__socket_ = None
         self.connected = False
     
-    def __set_debug_(self, debug):
-        self.__debug_ = debug
-    def __get_debug_(self):
-        return self.__debug_
-    debug = property(__get_debug_, __set_debug_, None, "debug verbose mode")
-
     #
     # Start of some useful functions
     #
@@ -105,10 +99,10 @@ class XeroxC2424:
                 send_command = self.__add_param_(send_command, params)
 
         self.__socket_.send("%s\n" % send_command)
-        if self.debug:
+        if config.DEBUG:
             print "S:", send_command
         result = self.__get_result_(RECV_BUF_SIZE)
-        if self.debug:
+        if config.DEBUG:
             if command != "sendblock":
                 print result,
             else:

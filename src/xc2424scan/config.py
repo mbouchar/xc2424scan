@@ -30,6 +30,13 @@ from ConfigParser import ConfigParser, NoSectionError, NoOptionError, \
                          DuplicateSectionError
 import sys, os
 
+DEBUG = False
+# @todo: Utiliser ConfigParser
+if "--verbose" in sys.argv:
+    DEBUG = True
+else:
+    DEBUG = False
+
 FILES_PREFIX = "/usr/share/xc2424scan/images/"
 NO_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "nopreview.png")
 WAITING_PREVIEW_FILENAME = os.path.join(FILES_PREFIX, "waitingpreview.png")
@@ -54,12 +61,6 @@ class Config(object):
         self.__address_ = None
         self.__port_ = None
         
-        # @todo: Utiliser ConfigParser
-        if "--verbose" in sys.argv:
-            self.__debug_ = True
-        else:
-            self.__debug_ = False
-
         self.reload()
         
     def __get_(self, key):
@@ -110,12 +111,7 @@ class Config(object):
     def __set_port_(self, port):
         self.__modify_("port", port)
         self.__port_ = port
-    
-    def __get_debug_(self):
-        return self.__debug_
-    def __set_debug_(self, debug):
-        self.__debug_ = debug
-    
+        
     def reload(self):
         # Lecture du fichier
         self.__config_.read(self.__config_file_)
@@ -132,4 +128,3 @@ class Config(object):
     
     address = property(__get_address_, __set_address_)
     port = property(__get_port_, __set_port_)
-    debug = property(__get_debug_, __set_debug_)

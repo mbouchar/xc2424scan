@@ -31,13 +31,13 @@ from xc2424scan.scanlib import *
 
 # @todo: Envoyer les résultats dans les signaux (ceux qui ne sont pas encore faits)
 class ThreadedXeroxC2424(QThread):
-    def __init__(self, debug = False):
+    def __init__(self):
         """
         """
         QThread.__init__(self)
         
         # The lib used to connect to the scanner
-        self.__scanner_ = XeroxC2424(debug)
+        self.__scanner_ = XeroxC2424()
         self.__method_ = None
         self.__params_ = None
         

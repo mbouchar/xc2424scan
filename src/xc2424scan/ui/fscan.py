@@ -88,7 +88,7 @@ class FScan(QMainWindow):
             self.__config_.reload()
 
         # Set the main widget        
-        self.__scanWidget_ = ScanWidget(self, self.__config_.debug)
+        self.__scanWidget_ = ScanWidget(self)
         self.setCentralWidget(self.__scanWidget_)
         
         self.__scanWidget_.connectToScanner(self.__config_.address, 

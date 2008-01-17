@@ -76,20 +76,18 @@ class ProgressDialog(QProgressDialog):
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
-    def __init__(self, parent = None, debug = False):
+    def __init__(self, parent = None):
         """Create a new scanning widget
         
         @param parent: The parent widget
         @type parent: QWidget
-        @param debug: verbose mode or not
-        @type debug: bool
         """
         QWidget.__init__(self, parent)
         self.__basewidget_ = Ui_ScanWidgetBase()
         self.__basewidget_.setupUi(self)
         
         # The threaded scanner object
-        self.__scanner_ = ThreadedXeroxC2424(debug)
+        self.__scanner_ = ThreadedXeroxC2424()
         
         # List of files available on the scanner
         self.__scanned_files_ = None
