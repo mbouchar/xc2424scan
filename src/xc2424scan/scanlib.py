@@ -334,8 +334,10 @@ class XeroxC2424:
             self.__setsamplesize_(samplesize)
 
             # Send new page signal
-            #if format in ["tiff", "bmp"]:    
-            newpage_hook(page, self.__tellfilesize_())
+            if format in ["tiff", "bmp"]:    
+                newpage_hook(page, self.__tellfilesize_())
+            else:
+                newpage_hook(page)
 
             # If we have multiple pages, we append the page number at the end
             if len(pages) > 1:
