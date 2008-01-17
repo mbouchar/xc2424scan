@@ -71,6 +71,7 @@ class ProgressFullDialog(QProgressDialog):
         if self.isVisible():
             self.setValue(self.value() + received_size)
 
+# @todo: Cancel button for this one too
 class ProgressDialog(QDialog):
     def __init__(self, parent = None):
         QDialog.__init__(self, parent)
@@ -133,15 +134,16 @@ class ProgressDialog(QDialog):
                 self.__progress_.setText("Received %d kb" % size)
 
 
-class ProgressWrapper:
+class ProgressWrapper(QObject):
     def __init__(self, parent = None):
+        QObject.__init__(self)
+        
         self.__progress_full_ = ProgressFullDialog(parent)
         self.__progress_ = ProgressDialog(parent)
         self.__current_ = None
 
-# @todo: Reconnect this:
-#        QObject.connect(self.__progress_, SIGNAL("canceled()"),
-#                        self.__ui_progress_cancelled_)
+        QObject.connect(self.__progress_full_, SIGNAL("canceled()"),
+                        self.__ui_progress_canceled_)
 
     def show(self, format, nbr_pages):
         if format in ["tiff", "bmp"]:
@@ -154,6 +156,9 @@ class ProgressWrapper:
         self.__current_.setNbrPages(nbr_pages)
         self.__current_.show()
     
+    def __ui_progress_canceled_(self):
+        self.emit(SIGNAL("canceled()"))
+    
     def newpage(self, current_page, file_size):
         self.__current_.newpage(current_page, file_size)
     
@@ -162,7 +167,8 @@ class ProgressWrapper:
 
     def hide(self):
         self.__current_.hide()
-        
+
+# @todo: Keyboard shortcuts (Seulement CTRL+Q)
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
@@ -183,6 +189,8 @@ class ScanWidget(QWidget):
         self.__scanned_files_ = None
         # Last folder visited
         self.__old_folder_ = "Public"
+        # Progress dialog
+        self.__progress_ = ProgressWrapper(self)
         
         # UI: Buttons
         QObject.connect(self.__basewidget_.refresh, SIGNAL("clicked()"),
@@ -225,13 +233,14 @@ class ScanWidget(QWidget):
         
         QObject.connect(self.__scanner_, SIGNAL("scanlibError(const QString&)"),
                         self.__scanlibErrorReceived)
-
-        # Progress dialog        
-        self.__progress_ = ProgressWrapper(self)
         QObject.connect(self.__scanner_, SIGNAL("newPage(int, int)"),
                         self.__progress_.newpage)
         QObject.connect(self.__scanner_, SIGNAL("progress(int)"),
                         self.__progress_.progress)
+
+        # Progress dialog
+        QObject.connect(self.__progress_, SIGNAL("canceled()"),
+                        self.__ui_progress_canceled_)
 
         self.__lock_()
 
@@ -301,7 +310,7 @@ class ScanWidget(QWidget):
         @type filename: str
         """
         if config.DEBUG_GUI:
-            print "<-- Received file:", filename
+            print "<-- File transfer finished for:", filename
         # Reset the progress dialog and unlock the widget
         self.__progress_.hide()
         self.__unlock_()
@@ -549,17 +558,11 @@ class ScanWidget(QWidget):
         else:
             self.__basewidget_.page.setEnabled(True)
     
-    # @todo: Send a signal to the thread asking to stop correctly instead, because we get garbage now
-    def __ui_progress_cancelled_(self):
+    def __ui_progress_canceled_(self):
         """Called when the user click on the progress cancel button"""
         if config.DEBUG_GUI:
-            print "--- Cancelled saving"
-        self.__scanner_.terminate()
-        self.__scanner_.wait()
-        self.__unlock_()
-        print "WARNING: Protocol screwed, exiting"
-        import sys
-        sys.exit(0)
+            print "--- Canceled saving"
+        self.__scanner_.stop()
     
     #
     # Other methods

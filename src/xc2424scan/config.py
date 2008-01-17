@@ -33,7 +33,7 @@ import sys, os
 DEBUG_GUI = False
 DEBUG_LIB = False
 
-# @todo: Utiliser ConfigParser
+# @todo: Utiliser OptionParser
 if "--debug-lib" in sys.argv or "--debug" in sys.argv:
     DEBUG_LIB = True
 if "--debug-gui" in sys.argv or "--debug" in sys.argv:
@@ -50,6 +50,7 @@ if not os.path.isfile(WAITING_PREVIEW_FILENAME):
     WAITING_PREVIEW_FILENAME = "data/waitingpreview.png"
 
 class Config(object):
+    """Config file reader"""
     
     GROUP   = "xc2424scan"
     ADDRESS = "address"

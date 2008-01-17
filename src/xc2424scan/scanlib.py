@@ -55,6 +55,10 @@ class XeroxC2424:
     def __init__(self):
         self.__socket_ = None
         self.connected = False
+        self.__stop_ = False
+    
+    def stop(self):
+        self.__stop_ = True
 
     def __del__(self):
         if self.connected is True:
@@ -153,7 +157,7 @@ class XeroxC2424:
         save_file = file(filename, "w")
         
         received_size = RECV_BUF_SIZE
-        while received_size != 0:
+        while received_size != 0 and not self.__stop_:
             cur_data = self.__send_command_("sendblock", FILE_BUF_SIZE)
             received_size = self.__get_received_size_(cur_data)
             cur_data = cur_data[len("sending\t%d\n" % received_size):]
@@ -310,10 +314,15 @@ class XeroxC2424:
 
         @raise ValueError: If a parameter is invalid
         """
-        if format == "pdf":
+        if format == self.FORMAT_PDF:
             pages = [-1]
 
         for page in pages:
+            # Check if the user canceled the transfer
+            if self.__stop_:
+                self.__stop_ = False
+                return
+
             # Set the filename
             self.__setfile_(filename)
             # Unknown

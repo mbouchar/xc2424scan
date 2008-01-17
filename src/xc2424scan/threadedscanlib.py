@@ -178,3 +178,6 @@ class ThreadedXeroxC2424(QThread):
 
         self.__method_ = None
         self.__params_ = None
+    
+    def stop(self):
+        self.__scanner_.stop()
