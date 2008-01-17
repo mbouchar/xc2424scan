@@ -28,7 +28,9 @@ __all__ = ["ScanWidget"]
 from PyQt4.QtCore import QDir, QObject, QRect, Qt, SIGNAL
 from PyQt4.QtGui import QWidget, QFileDialog, QListWidgetItem, QPixmap, \
                         QIcon, QMessageBox, QInputDialog, QLineEdit, QPainter, \
-                        QProgressDialog, QMessageBox, QSizePolicy
+                        QProgressDialog, QMessageBox, QSizePolicy, QDialog, \
+                        QLabel, QVBoxLayout, QHBoxLayout, QSpacerItem, \
+                        QSizePolicy
 import os
 
 from xc2424scan import config
@@ -37,16 +39,15 @@ from xc2424scan.scanlib import ProtectedError, SocketError, NoPreviewError
 
 from xc2424scan.ui.widgets.scanwidgetbase import Ui_ScanWidgetBase
 
-# @todo: Il est possible de savoir le nombre de pages des pdfs aussi avec un peu de travail
-class ProgressDialog(QProgressDialog):
+class ProgressFullDialog(QProgressDialog):
     def __init__(self, parent = None):
         QProgressDialog.__init__(self, parent)
         self.setWindowTitle(_("Downloading"))
 
         # Top level fixed size dialog
         self.setWindowModality(Qt.WindowModal)
-        self.setFixedSize(self.size())
-        # Do not close at 100%
+#        self.setFixedSize(self.size())
+        # Do not close when reaching 100%
         self.setAutoClose(False)
         self.setAutoReset(False)
         
@@ -57,13 +58,11 @@ class ProgressDialog(QProgressDialog):
 
     def newpage(self, current_page, file_size):
         if self.isVisible():
-            # Set progress range
+            # Set progress value to 0 and range to file size
             self.setValue(0)
             self.setRange(0, file_size)
             # Set label text
-            if self.__nbr_pages_ == -1:
-                self.setLabelText(_("Getting file"))
-            elif self.__nbr_pages_ == 1:
+            if self.__nbr_pages_ == 1:
                 self.setLabelText(_("Getting page %d") % current_page)
             else:
                 self.setLabelText(_("Getting page %d of %d") % \
@@ -73,6 +72,96 @@ class ProgressDialog(QProgressDialog):
         if self.isVisible():
             self.setValue(self.value() + received_size)
 
+# @todo: Il est possible de savoir le nombre de pages des pdfs aussi avec un peu de travail
+class ProgressDialog(QDialog):
+    def __init__(self, parent = None):
+        QDialog.__init__(self, parent)
+        self.setWindowTitle(_("Downloading"))
+
+#        Form.resize(QtCore.QSize(QtCore.QRect(0,0,346,56).size()).expandedTo(Form.minimumSizeHint()))
+        self.__page_ = QLabel(self)
+        self.__progress_ = QLabel(self)
+        self.__downloaded_ = 0
+        self.__nbr_pages_ = -1
+
+        vboxlayout = QVBoxLayout(self)
+
+        labellayout = QHBoxLayout()
+        labellayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        labellayout.addWidget(self.__page_)
+        labellayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        vboxlayout.addLayout(labellayout)
+
+        progresslayout = QHBoxLayout()
+        progresslayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        progresslayout.addWidget(self.__progress_)
+        progresslayout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        vboxlayout.addLayout(progresslayout)
+
+    def setLabelText(self, text):
+        self.__page_.setText(text)
+
+    def setValue(self, value):
+        self.__downloaded_ = value
+        self.progress(0)
+        
+    def setNbrPages(self, nbr_pages):
+        self.__nbr_pages_ = nbr_pages
+
+    def newpage(self, current_page, file_size = None):
+        if self.isVisible():
+            # Set progress value to 0
+            self.setValue(0)
+            # Set label text
+            if self.__nbr_pages_ == -1:
+                self.__page_.setText(_("Getting file"))
+            elif self.__nbr_pages_ == 1:
+                self.__page_.setText(_("Getting page %d") % current_page)
+            else:
+                self.__page_.setText(_("Getting page %d of %d") % \
+                                     (current_page, self.__nbr_pages_))
+    
+    def progress(self, received_size):
+        self.__downloaded_ += received_size
+        if self.isVisible():
+            size = self.__downloaded_ / 1024
+            unit = "kb"
+            if size > 1024:
+                size = size / 1024
+                unit = "mb"
+
+            self.__progress_.setText("Received %d %s" % (size, unit))
+
+class ProgressWrapper:
+    def __init__(self, parent = None):
+        self.__progress_full_ = ProgressFullDialog(parent)
+        self.__progress_ = ProgressDialog(parent)
+        self.__current_ = None
+
+# @todo: Reconnect this:
+#        QObject.connect(self.__progress_, SIGNAL("canceled()"),
+#                        self.__ui_progress_cancelled_)
+
+    def show(self, format, nbr_pages):
+        if format in ["tiff", "bmp"]:
+            self.__current_ = self.__progress_full_
+        else:
+            self.__current_ = self.__progress_
+
+        self.__current_.setLabelText(_("Waiting for transfer to begin"))
+        self.__current_.setValue(0)
+        self.__current_.setNbrPages(nbr_pages)
+        self.__current_.show()
+    
+    def newpage(self, current_page, file_size):
+        self.__current_.newpage(current_page, file_size)
+    
+    def progress(self, received_size):
+        self.__current_.progress(received_size)
+
+    def hide(self):
+        self.__current_.hide()
+        
 class ScanWidget(QWidget):
     """The main scanning widget"""
     
@@ -137,13 +226,11 @@ class ScanWidget(QWidget):
                         self.__scanlibErrorReceived)
 
         # Progress dialog        
-        self.__progress_ = ProgressDialog(self)
+        self.__progress_ = ProgressWrapper(self)
         QObject.connect(self.__scanner_, SIGNAL("newPage(int, int)"),
                         self.__progress_.newpage)
         QObject.connect(self.__scanner_, SIGNAL("progress(int)"),
                         self.__progress_.progress)
-        QObject.connect(self.__progress_, SIGNAL("canceled()"),
-                        self.__ui_progress_cancelled_)
 
         self.__lock_()
 
@@ -357,15 +444,8 @@ class ScanWidget(QWidget):
                 samplesize = self.getSamplesize()
                 self.__scanner_.getFile(filename, save_filename, pages,
                                         format, dpi, samplesize)
-                # Show the progress dialog (only works for tiff and bmp)
-                if self.getFormat() in ["tiff", "bmp"]:
-                    self.__progress_.setLabelText(_("Waiting for transfer to begin"))
-                    self.__progress_.setNbrPages(len(pages))
-                    self.__progress_.setValue(0)
-                    self.__progress_.show()
-                else:
-                    # @todo: Do something for other formats
-                    pass
+                # Show the progress dialog
+                self.__progress_.show(format, len(pages))
         else:
             print "WARNING: No file selected (save), this should not happen"
 
