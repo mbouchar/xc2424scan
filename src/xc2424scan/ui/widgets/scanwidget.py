@@ -71,7 +71,6 @@ class ProgressFullDialog(QProgressDialog):
         if self.isVisible():
             self.setValue(self.value() + received_size)
 
-# @todo: Il est possible de savoir le nombre de pages des pdfs aussi avec un peu de travail
 class ProgressDialog(QDialog):
     def __init__(self, parent = None):
         QDialog.__init__(self, parent)
@@ -83,7 +82,7 @@ class ProgressDialog(QDialog):
         self.__page_ = QLabel(self)
         self.__progress_ = QLabel(self)
         self.__downloaded_ = 0
-        self.__nbr_pages_ = -1
+        self.__nbr_pages_ = 0
 
         vboxlayout = QVBoxLayout(self)
 
@@ -114,7 +113,8 @@ class ProgressDialog(QDialog):
             # Set progress value to 0
             self.setValue(0)
             # Set label text
-            if self.__nbr_pages_ == -1:
+            if self.__nbr_pages_ == 0:
+                # Only happens when getting a pdf file
                 self.__page_.setText(_("Getting file"))
             elif self.__nbr_pages_ == 1:
                 self.__page_.setText(_("Getting page %d") % current_page)
@@ -126,12 +126,12 @@ class ProgressDialog(QDialog):
         self.__downloaded_ += received_size
         if self.isVisible():
             size = self.__downloaded_ / 1024
-            unit = "kb"
             if size > 1024:
-                size = size / 1024
-                unit = "mb"
+                size = float(size) / 1024
+                self.__progress_.setText("Received %.3f mb" % size)
+            else:
+                self.__progress_.setText("Received %d kb" % size)
 
-            self.__progress_.setText("Received %d %s" % (size, unit))
 
 class ProgressWrapper:
     def __init__(self, parent = None):
@@ -435,10 +435,7 @@ class ScanWidget(QWidget):
                     save_filename += ".%s" % self.getFormat()
                 # Call the saving thread method
                 format = self.getFormat()
-                if format != "pdf":
-                    pages = self.getPages()
-                else:
-                    pages = None
+                pages = self.getPages()
                 dpi = self.getDpi()
                 if dpi == None:
                     dpi = self.__scanned_files_[filename]["dpi"]
@@ -649,6 +646,9 @@ class ScanWidget(QWidget):
             return 600
     
     def getPages(self):
+        if self.getFormat() == "pdf":
+            return []
+        
         if str(self.__basewidget_.page.currentText()) == "all":
             return [x for x in range(1, self.__scanned_files_[self.currentFilename()]["nbpages"] + 1)]
         else:
