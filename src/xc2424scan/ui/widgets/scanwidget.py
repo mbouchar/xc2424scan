@@ -46,7 +46,6 @@ class ProgressFullDialog(QProgressDialog):
 
         # Top level fixed size dialog
         self.setWindowModality(Qt.WindowModal)
-#        self.setFixedSize(self.size())
         # Do not close when reaching 100%
         self.setAutoClose(False)
         self.setAutoReset(False)
@@ -78,7 +77,9 @@ class ProgressDialog(QDialog):
         QDialog.__init__(self, parent)
         self.setWindowTitle(_("Downloading"))
 
-#        Form.resize(QtCore.QSize(QtCore.QRect(0,0,346,56).size()).expandedTo(Form.minimumSizeHint()))
+        # Top level fixed size dialog
+        self.setWindowModality(Qt.WindowModal)
+
         self.__page_ = QLabel(self)
         self.__progress_ = QLabel(self)
         self.__downloaded_ = 0
