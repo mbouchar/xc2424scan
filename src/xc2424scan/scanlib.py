@@ -149,7 +149,6 @@ class XeroxC2424:
             
         return file_data
 
-    # @todo: Le nombre total de données transférées != taille donnée par le scanner
     def __save_file_data_(self, filename, progress_hook):
         save_file = file(filename, "w")
         
