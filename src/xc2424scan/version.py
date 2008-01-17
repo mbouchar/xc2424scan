@@ -17,10 +17,6 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-# @todo: Refaire l'image waiting for preview (enlever le the)
-# @todo: Ajouter le fichier .desktop
-# @todo: Lintian clean package
-
 """Module contenant les informations sur le logiciel xc2424scan"""
 
 __program__     = "xc2424scan"
