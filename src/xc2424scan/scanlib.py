@@ -89,7 +89,7 @@ class XeroxC2424:
         elif isinstance(param, str):
             command = "%s\t%s" % (command, param)
         else:
-            raise ValueError("Invalid parameter")
+            raise ValueError("Invalid parameter:", param)
 
         return command
 

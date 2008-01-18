@@ -484,7 +484,7 @@ class ScanWidget(QWidget):
                     dpi = self.__scanned_files_[filename]["dpi"]
                 samplesize = self.getSamplesize()
                 self.__scanner_.getFile(filename, save_filename, pages,
-                                        format, [dpi, dpi], samplesize)
+                                        format, dpi, samplesize)
                 # Show the progress dialog
                 self.__progress_.show(format, len(pages))
         else:
@@ -676,15 +676,15 @@ class ScanWidget(QWidget):
         if dpi == "max":
             return None
         elif dpi == "100x100":
-            return 100
+            return [100, 100]
         elif dpi == "200x200":
-            return 200
+            return [200, 200]
         elif dpi == "300x300":
-            return 300
+            return [300, 300]
         elif dpi == "400x400":
-            return 400
+            return [400, 400]
         elif dpi == "600x600":
-            return 600
+            return [600, 600]
     
     def getPages(self):
         if self.getFormat() == "pdf":
