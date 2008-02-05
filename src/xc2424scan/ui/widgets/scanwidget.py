@@ -612,8 +612,8 @@ class ScanWidget(QWidget):
         @type pixmap: QPixmap
         """
         painter = QPainter()
-        painter.setPen(Qt.black);
         painter.begin(pixmap)
+        painter.setPen(Qt.black);
         painter.drawRect(QRect(0, 0, pixmap.width() - 1, pixmap.height() - 1))
         painter.end()
 
