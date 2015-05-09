@@ -215,17 +215,23 @@ class XeroxC2424:
     def getFolders(self):
         """Returns the folders listing
         """
-        result = self.__send_command_("listfolders").split("\n")[:-1]
-        folderscount = int(result[0].split("\t")[1])
-        result = result[1:]
-
         folders = []
-        for folder in result:
-            folders.append(folder.split("\t")[1])
+        result = self.__send_command_("listfolders")
 
-        if len(folders) != folderscount:
-            raise ValueError("Folder count is invalid: %s vs %s" % \
-                             (folderscount, len(folders)))
+        if result is not None:
+            result = result.split("\n")[:-1]
+            if len(result) > 0:        
+                splitted_result = result[0].split("\t")
+                if len(splitted_result) >= 2:
+                    folderscount = int(splitted_result[1])
+
+                    result = result[1:]
+                    for folder in result:
+                        folders.append(folder.split("\t")[1])
+
+                    if len(folders) != folderscount:
+                        raise ValueError("Folder count is invalid: %s vs %s" % \
+                                         (folderscount, len(folders)))
 
         return folders
 

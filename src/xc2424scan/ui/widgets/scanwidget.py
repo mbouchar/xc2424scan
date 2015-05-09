@@ -180,16 +180,22 @@ class ProgressWrapper(QObject):
         self.emit(SIGNAL("canceled()"))
     
     def newpage(self, current_page, file_size):
-        self.__current_.newpage(current_page, file_size)
+        if self.__current_ is not None:
+            self.__current_.newpage(current_page, file_size)
     
     def progress(self, received_size):
-        self.__current_.progress(received_size)
+        if self.__current_ is not None:
+            self.__current_.progress(received_size)
     
     def isVisible(self):
-        return self.__current_.isVisible()
+        if self.__current_ is not None:
+            return self.__current_.isVisible()
+        else:
+            return False
 
     def hide(self):
-        self.__current_.hide()
+        if self.__current_ is not None:
+            self.__current_.hide()
 
 class ScanWidget(QWidget):
     """The main scanning widget"""
