@@ -55,7 +55,7 @@
 
  * Initial version
  * Base ui with files listing
- * Shows some informations when selecting an imge
+ * Shows some informations when selecting an image
  * Dynamic options for some of the image parameters
  * Able to get some basic files (not very stable)
  * Basic debian package
