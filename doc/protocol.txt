@@ -3,18 +3,18 @@ Network protocol to get scanned files from a Xerox WorkCentre C2424
 
 The port for the xerox scanning protocol is : 14882
 
-All commands ending with : '\n'
-All command parameters are separated with : '\t'
+All commands are ending with : '\n' (new line)
+All command parameters are separated with : '\t' (tab)
 
 All commands and responses are received integrally. They are separated
-in multiple lines only for readability
+in multiple lines below only for readability
 
 -------------
 | COMMANDS |
 -------------
 
-    S: -> What we are sending to the WorkCentre
-    R: -> What is received from the WorkCentre
+    S: -> What we are sending to the printer
+    R: -> What is received from the printer
     E: -> A little explanation of the command (or response)
     
     Get the current directory
